@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>理財生存戰：助教版</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #e67e22; }
+        body { font-family: "Microsoft JhengHei", sans-serif; background: #dfe6e9; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        #game-container { display: flex; gap: 20px; width: 95%; max-width: 750px; }
+        
+        /* 側邊助教區 */
+        #helper-box { width: 200px; background: white; border-radius: 20px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; display: flex; flex-direction: column; justify-content: center; }
+        #avatar { font-size: 80px; margin-bottom: 10px; transition: 0.3s; }
+        #helper-msg { font-size: 0.9rem; color: #555; background: #f1f2f6; padding: 10px; border-radius: 10px; position: relative; }
+        #helper-msg::after { content: ''; position: absolute; left: 50%; top: -10px; transform: translateX(-50%); border-width: 0 10px 10px 10px; border-style: solid; border-color: transparent transparent #f1f2f6 transparent; }
+
+        /* 主遊戲區 */
+        #game-box { flex: 1; background: white; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-top: 10px solid var(--primary); overflow: hidden; padding-bottom: 20px; }
+        .screen { padding: 20px; text-align: center; }
+        .hidden { display: none; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px; }
+        .stat { background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #eee; }
+        .label { font-size: 0.7rem; color: #95a5a6; display: block; }
+        .val { font-size: 1rem; font-weight: bold; }
+        .btn { width: 100%; padding: 10px; margin-bottom: 8px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; }
+        .btn-work { background: #3498db; }
+        .btn-up { background: #f39c12; }
+        .btn-invest { background: #9b59b6; }
+        .btn-fun { background: #27ae60; }
+        #log { height: 80px; overflow-y: auto; background: #2c3e50; color: #ecf0f1; padding: 10px; font-size: 0.8rem; text-align: left; border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="helper-box">
+        <div id="avatar">👨‍🏫</div>
+        <div id="helper-msg">你好！我是理財助教小王。選個職業開始吧！</div>
+    </div>
+
+    <div id="game-box">
+        <div id="start-screen" class="screen">
+            <h2>🎯 理財生存戰</h2>
+            <button class="btn btn-work" onclick="startGame('delivery')">🛵 外送員 (快節奏)</button>
+            <button class="btn btn-up" onclick="startGame('office')">💼 行政員 (穩健型)</button>
+            <button class="btn btn-invest" onclick="startGame('tech')">💻 工程師 (高風險)</button>
+        </div>
+
+        <div id="game-screen" class="screen hidden">
+            <h3 id="job-title" style="margin:0"></h3>
+            <div class="stats-grid">
+                <div class="stat"><span class="label">資產</span><span id="bal" class="val">$0</span></div>
+                <div class="stat"><span class="label">壓力</span><span id="stress" class="val">0%</span></div>
+                <div class="stat"><span class="label">月份</span><span id="mon" class="val">1/12</span></div>
+                <div class="stat"><span class="label">時薪</span><span id="wage" class="val">$0</span></div>
+            </div>
+            <div class="actions">
+                <button id="work-btn" class="btn btn-work" onclick="play('work')"></button>
+                <button id="up-btn" class="btn btn-up" onclick="play('up')"></button>
+                <button class="btn btn-invest" onclick="play('invest')">📈 買入存股 (-$3萬)</button>
+                <button class="btn btn-fun" onclick="play('fun')">🍜 放鬆休息 (-$1000)</button>
+            </div>
+            <div id="log"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const jobs = {
+        delivery: { title: "外送員", bal: 20000, base: 45000, wage: 4000, upCost: 5000, upGain: 200, sWork: 20, sUp: 25, work: "送外送" },
+        office: { title: "行政員", bal: 35000, base: 30000, wage: 1800, upCost: 8000, upGain: 2000, sWork: 8, sUp: 15, work: "假日兼差" },
+        tech: { title: "工程師", bal: 15000, base: 42000, wage: 2500, upCost: 30000, upGain: 7500, sWork: 15, sUp: 10, work: "接案" }
+    };
+
+    let p = {};
+
+    function updateHelper(msg, emoji) {
+        document.getElementById('helper-msg').innerText = msg;
+        if(emoji) document.getElementById('avatar').innerText = emoji;
+    }
+
+    function startGame(key) {
+        p = { ...jobs[key], mon: 1, clk: 0, stress: 20, pass: 0, target: 180000 };
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        document.getElementById('job-title').innerText = p.title;
+        document.getElementById('work-btn').innerText = `${p.work} (+$${p.wage})`;
+        document.getElementById('up-btn').innerText = `📚 進修 (-$${p.upCost})`;
+        updateHelper("加油！記得別讓壓力爆表喔！", "👨‍💼");
+        update();
+    }
+
+    function play(type) {
+        p.clk++;
+        if (type === 'work') {
+            p.bal += p.wage; p.stress += p.sWork;
+            updateHelper("努力賺錢中...辛苦了！", "💪");
+        } else if (type === 'up') {
+            if (p.stress > 80) { updateHelper("你太累了，讀不下書！", "😫"); p.clk--; return; }
+            if (p.bal >= p.upCost) {
+                p.bal -= p.upCost; p.wage += p.upGain; p.stress += p.sUp;
+                updateHelper("學習讓你更值錢！", "🧠");
+            }
+        } else if (type === 'invest') {
+            if (p.bal >= 30000) { p.bal -= 30000; p.pass += 1500; updateHelper("哇！你開始讓錢幫你工作了！", "🤑"); }
+        } else if (type === 'fun') {
+            if (p.bal >= 1000) { p.bal -= 1000; p.stress = Math.max(0, p.stress - 30); updateHelper("休息一下，精神百倍！", "😎"); }
+        }
+
+        if (p.clk >= 4) {
+            p.clk = 0; p.mon++;
+            p.bal += (p.base + p.pass - 23000);
+            if (p.stress > 70) updateHelper("月底了...你臉色很差，要注意健康！", "😰");
+        }
+        update();
+        check();
+    }
+
+    function update() {
+        document.getElementById('bal').innerText = `$${p.bal.toLocaleString()}`;
+        document.getElementById('stress').innerText = `${p.stress}%`;
+        document.getElementById('mon').innerText = `${p.mon} / 12`;
+        document.getElementById('wage').innerText = `$${p.wage}`;
+    }
+
+    function check() {
+        if (p.bal < 0 || p.stress >= 100) {
+            alert(p.stress >= 100 ? "助教：你過勞了！理財很重要，命更重要。" : "助教：沒錢了...我們回去練練再開局。");
+            location.reload();
+        } else if (p.mon > 12) {
+            alert(p.bal >= p.target ? "助教：太棒了！你達成了存錢計畫！" : "助教：雖然沒達標，但至少你活下來了。");
+            location.reload();
+        }
+    }
+</script>
+</body>
+</html>
