@@ -102,36 +102,4 @@
                 updateHelper("學習讓你更值錢！", "🧠");
             }
         } else if (type === 'invest') {
-            if (p.bal >= 30000) { p.bal -= 30000; p.pass += 1500; updateHelper("哇！你開始讓錢幫你工作了！", "🤑"); }
-        } else if (type === 'fun') {
-            if (p.bal >= 1000) { p.bal -= 1000; p.stress = Math.max(0, p.stress - 30); updateHelper("休息一下，精神百倍！", "😎"); }
-        }
-
-        if (p.clk >= 4) {
-            p.clk = 0; p.mon++;
-            p.bal += (p.base + p.pass - 23000);
-            if (p.stress > 70) updateHelper("月底了...你臉色很差，要注意健康！", "😰");
-        }
-        update();
-        check();
-    }
-
-    function update() {
-        document.getElementById('bal').innerText = `$${p.bal.toLocaleString()}`;
-        document.getElementById('stress').innerText = `${p.stress}%`;
-        document.getElementById('mon').innerText = `${p.mon} / 12`;
-        document.getElementById('wage').innerText = `$${p.wage}`;
-    }
-
-    function check() {
-        if (p.bal < 0 || p.stress >= 100) {
-            alert(p.stress >= 100 ? "助教：你過勞了！理財很重要，命更重要。" : "助教：沒錢了...我們回去練練再開局。");
-            location.reload();
-        } else if (p.mon > 12) {
-            alert(p.bal >= p.target ? "助教：太棒了！你達成了存錢計畫！" : "助教：雖然沒達標，但至少你活下來了。");
-            location.reload();
-        }
-    }
-</script>
-</body>
-</html>
+            if (p.bal >= 30000) { p.bal -= 30000; p.pass

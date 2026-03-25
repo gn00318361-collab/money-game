@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小小理財家 — 金融教育營隊</title>
+<style>
+body{font-family:"Microsoft JhengHei",sans-serif;background:#f0f2f5;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;padding:10px;}
+#app{width:95%;max-width:450px;}
+.menu-box{background:#fff;border-radius:15px;box-shadow:0 10px 25px rgba(0,0,0,.1);overflow:hidden;border-top:8px solid #f5a623;}
+.menu-header{text-align:center;padding:20px 15px 10px;position:relative;}
+.menu-header h1{margin:0;font-size:1.5em;color:#f5a623;}
+.menu-header p{margin:5px 0 0;font-size:.85rem;color:#888;}
+.gear-btn{position:absolute;top:12px;right:12px;font-size:1.3em;cursor:pointer;opacity:.5;padding:4px;}
+.gear-btn:active{opacity:1;}
+.menu-list{padding:10px 15px 15px;}
+.menu-item{display:flex;align-items:center;gap:12px;padding:14px;margin-bottom:8px;border-radius:10px;cursor:pointer;transition:.2s;border:2px solid #eee;}
+.menu-item:hover{border-color:#f5a623;background:#fffbf0;}
+.menu-item:active{transform:scale(.98);}
+.menu-item .mi-icon{font-size:1.8em;width:44px;text-align:center;}
+.menu-item .mi-info h3{margin:0;font-size:.95em;color:#2c3e50;}
+.menu-item .mi-info p{margin:2px 0 0;font-size:.75em;color:#999;}
+/* Player input */
+.player-section{padding:0 15px 15px;}
+.player-input-wrap{display:flex;gap:8px;align-items:center;background:#fafafa;padding:10px;border-radius:10px;border:1px solid #eee;}
+.player-input-wrap label{font-size:.8em;color:#888;white-space:nowrap;}
+.player-input-wrap input{flex:1;border:1px solid #ddd;border-radius:6px;padding:8px;font-size:.9em;font-family:inherit;}
+.player-input-wrap input:focus{outline:none;border-color:#f5a623;}
+/* API status */
+.api-status{text-align:center;padding:4px;font-size:.7em;}
+.api-status.connected{color:#27ae60;}
+.api-status.disconnected{color:#e74c3c;}
+/* Settings overlay */
+.settings-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:999;justify-content:center;align-items:center;padding:20px;}
+.settings-overlay.show{display:flex;}
+.settings-card{background:#fff;border-radius:15px;padding:24px;max-width:400px;width:100%;}
+.settings-card h3{margin:0 0 12px;font-size:1.1em;}
+.settings-card label{font-size:.8em;color:#888;display:block;margin-bottom:4px;}
+.settings-card input{width:100%;border:1px solid #ddd;border-radius:6px;padding:10px;font-size:.85em;margin-bottom:12px;font-family:inherit;}
+.settings-card input:focus{outline:none;border-color:#f5a623;}
+.settings-btns{display:flex;gap:8px;}
+.settings-btns button{flex:1;padding:10px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:.9em;}
+.settings-btns .s-save{background:#f5a623;color:#fff;}
+.settings-btns .s-cancel{background:#eee;color:#666;}
+/* Game styles */
+.game-box{display:none;background:#fff;border-radius:15px;box-shadow:0 10px 25px rgba(0,0,0,.1);overflow:hidden;}
+.game-box.active{display:block;}
+.g-header{padding:12px 15px;text-align:center;border-bottom:1px solid #eee;position:relative;}
+.g-header h2{margin:0;font-size:1.1em;}
+.g-header .g-sub{margin:3px 0 0;font-size:.8rem;color:#888;}
+.g-back{position:absolute;left:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1.2em;color:#999;padding:4px 8px;border-radius:6px;}
+.g-back:active{background:#f0f0f0;}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px 12px;background:#fafafa;}
+.stat-card{background:#fff;padding:7px 6px;border-radius:8px;text-align:center;border:1px solid #eee;transition:.3s;}
+.stat-card.flash-green{animation:flashG .5s;}
+.stat-card.flash-red{animation:flashR .5s;}
+@keyframes flashG{0%{background:#d4edda}100%{background:#fff}}
+@keyframes flashR{0%{background:#f8d7da}100%{background:#fff}}
+.label{font-size:.68rem;color:#888;display:block;}
+.value{font-size:1rem;font-weight:bold;color:#2c3e50;}
+.actions{padding:10px 12px;}
+.btn{width:100%;padding:11px;margin-bottom:6px;border:none;border-radius:8px;cursor:pointer;font-weight:bold;font-size:.88rem;transition:.2s;color:#fff;text-align:left;display:flex;align-items:center;gap:8px;}
+.btn:active{transform:translateY(2px);opacity:.9;}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+.btn-blue{background:#3498db;}.btn-purple{background:#9b59b6;}.btn-orange{background:#f39c12;}.btn-green{background:#2ecc71;}.btn-red{background:#e74c3c;}.btn-teal{background:#1abc9c;}.btn-pink{background:#e91e63;}.btn-gray{background:#95a5a6;}
+.log-box{height:110px;overflow-y:auto;background:#2c3e50;color:#95a5a6;padding:10px 12px;font-size:.8rem;line-height:1.5;}
+.highlight{color:#f1c40f;font-weight:bold;}
+.good{color:#2ecc71;}.bad{color:#e74c3c;}
+.prog-wrap{padding:0 12px;margin:6px 0;}
+.prog-bar{height:10px;background:#eee;border-radius:5px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:5px;transition:width .5s;}
+.end-screen{padding:24px;text-align:center;}
+.end-screen .end-emoji{font-size:3em;}
+.end-screen h2{margin:8px 0;font-size:1.3em;}
+.end-screen .end-msg{font-size:.9em;color:#666;line-height:1.6;margin:10px 0;}
+.end-screen .end-score{font-size:1.1em;font-weight:bold;margin:8px 0;color:#2c3e50;}
+.end-screen .end-tip{background:#e8f5e9;border-radius:10px;padding:12px;font-size:.8em;color:#2e7d32;text-align:left;line-height:1.5;margin:12px 0;}
+.end-btns{display:flex;gap:8px;}
+.end-btns .btn{text-align:center;justify-content:center;}
+.stars{font-size:1.4em;color:#f5a623;letter-spacing:3px;margin:6px 0;}
+.send-status{font-size:.75em;color:#888;margin-top:6px;}
+.send-status.ok{color:#27ae60;}
+.send-status.fail{color:#e74c3c;}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- SETTINGS OVERLAY -->
+<div class="settings-overlay" id="settings-overlay">
+  <div class="settings-card">
+    <h3>⚙️ Google Sheet 設定</h3>
+    <label>貼上 Google Apps Script 的 Web App 網址：</label>
+    <input type="text" id="api-url-input" placeholder="https://script.google.com/macros/s/xxxxx/exec">
+    <div class="settings-btns">
+      <button class="s-save" onclick="saveApiUrl()">💾 儲存</button>
+      <button class="s-cancel" onclick="closeSettings()">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- MENU -->
+<div class="menu-box" id="menu">
+  <div class="menu-header">
+    <span class="gear-btn" onclick="openSettings()">⚙️</span>
+    <h1>🏦 小小理財家</h1>
+    <p>金融教育營隊 — 選一個遊戲開始挑戰！</p>
+  </div>
+  <div class="player-section">
+    <div class="player-input-wrap">
+      <label>👤 你的名字/座號：</label>
+      <input type="text" id="player-name" placeholder="例：3年1班 05號 王小明" maxlength="30">
+    </div>
+  </div>
+  <div class="api-status" id="api-status"></div>
+  <div class="menu-list">
+    <div class="menu-item" onclick="openGame(1)"><div class="mi-icon">💰</div><div class="mi-info"><h3>零用錢大作戰</h3><p>管理一個月零用錢，平衡快樂與存款！</p></div></div>
+    <div class="menu-item" onclick="openGame(2)"><div class="mi-icon">🏪</div><div class="mi-info"><h3>小小商店街</h3><p>經營自己的小店，進貨賣貨賺大錢！</p></div></div>
+    <div class="menu-item" onclick="openGame(3)"><div class="mi-icon">🐷</div><div class="mi-info"><h3>存錢買夢想</h3><p>每月存錢買腳踏車，面對誘惑和機會！</p></div></div>
+  </div>
+</div>
+
+<!-- GAME 1 -->
+<div class="game-box" id="g1">
+  <div class="g-header" style="border-top:8px solid #3498db;"><span class="g-back" onclick="goMenu()">←</span><h2>💰 零用錢大作戰</h2><div class="g-sub">目標：4 週後存款超過 $300！</div></div>
+  <div class="stats" id="g1-stats"></div>
+  <div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" id="g1-prog" style="width:0%;background:linear-gradient(90deg,#3498db,#2ecc71);"></div></div></div>
+  <div class="actions" id="g1-actions"></div>
+  <div class="log-box" id="g1-log"></div>
+</div>
+
+<!-- GAME 2 -->
+<div class="game-box" id="g2">
+  <div class="g-header" style="border-top:8px solid #9b59b6;"><span class="g-back" onclick="goMenu()">←</span><h2>🏪 小小商店街</h2><div class="g-sub">目標：10 天賺到 $1,000 利潤！</div></div>
+  <div class="stats" id="g2-stats"></div>
+  <div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" id="g2-prog" style="width:0%;background:linear-gradient(90deg,#9b59b6,#e91e63);"></div></div></div>
+  <div class="actions" id="g2-actions"></div>
+  <div class="log-box" id="g2-log"></div>
+</div>
+
+<!-- GAME 3 -->
+<div class="game-box" id="g3">
+  <div class="g-header" style="border-top:8px solid #f5a623;"><span class="g-back" onclick="goMenu()">←</span><h2>🐷 存錢買夢想</h2><div class="g-sub">目標：6 個月存到 $3,000 買腳踏車！</div></div>
+  <div class="stats" id="g3-stats"></div>
+  <div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" id="g3-prog" style="width:0%;background:linear-gradient(90deg,#f5a623,#e74c3c);"></div></div></div>
+  <div class="actions" id="g3-actions"></div>
+  <div class="log-box" id="g3-log"></div>
+</div>
+
+</div>
+<script>
+// ===== API / GOOGLE SHEET =====
+let API_URL = localStorage.getItem('finGameApiUrl') || '';
+function openSettings(){$('settings-overlay').classList.add('show');$('api-url-input').value=API_URL;}
+function closeSettings(){$('settings-overlay').classList.remove('show');}
+function saveApiUrl(){API_URL=$('api-url-input').value.trim();localStorage.setItem('finGameApiUrl',API_URL);closeSettings();updateApiStatus();}
+function updateApiStatus(){const el=$('api-status');if(API_URL){el.textContent='✅ Google Sheet 已連接';el.className='api-status connected';}else{el.textContent='⚠️ 尚未設定 Google Sheet（點右上 ⚙️ 設定）';el.className='api-status disconnected';}}
+updateApiStatus();
+
+// Track choices per game
+let g1Choices=[], g2Choices=[], g3Choices=[];
+
+function sendToSheet(data){
+  if(!API_URL)return;
+  data.player = $('player-name').value.trim() || '匿名';
+  fetch(API_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(data)})
+    .then(()=>{const el=document.querySelector('.send-status');if(el){el.textContent='✅ 已傳送到 Google Sheet';el.className='send-status ok';}})
+    .catch(()=>{const el=document.querySelector('.send-status');if(el){el.textContent='⚠️ 傳送失敗，請檢查網址';el.className='send-status fail';}});
+}
+
+// ===== NAV =====
+function $(id){return document.getElementById(id)}
+function goMenu(){document.querySelectorAll('.game-box').forEach(g=>g.classList.remove('active'));$('menu').style.display='block';}
+function openGame(n){
+  if(!$('player-name').value.trim()){$('player-name').style.border='2px solid #e74c3c';$('player-name').focus();$('player-name').placeholder='⚠️ 請先輸入名字或座號！';return;}
+  $('player-name').style.border='';
+  $('menu').style.display='none';document.querySelectorAll('.game-box').forEach(g=>g.classList.remove('active'));$('g'+n).classList.add('active');[,initG1,initG2,initG3][n]();
+}
+function flashStat(el,good){el.classList.remove('flash-green','flash-red');void el.offsetWidth;el.classList.add(good?'flash-green':'flash-red');}
+function addLog(id,msg,cls){const d=document.createElement('div');if(cls)d.className=cls;d.innerText=msg;$(id).prepend(d);}
+
+// =============================================
+// GAME 1: 零用錢大作戰
+// =============================================
+let s1;
+function initG1(){
+  s1={money:500,happy:60,week:1,acts:0,saved:0,allowance:100};g1Choices=[];
+  $('g1-log').innerHTML='';addLog('g1-log','💵 爸爸給了這個月 $500 零用錢！每週還有 $100，聰明使用吧！','highlight');renderG1();
+}
+function renderG1(){
+  $('g1-stats').innerHTML=`
+    <div class="stat-card" id="s1-money"><span class="label">💵 零用錢</span><span class="value" style="color:#e67e22">$${s1.money}</span></div>
+    <div class="stat-card" id="s1-week"><span class="label">📅 週數</span><span class="value">${s1.week} / 4</span></div>
+    <div class="stat-card" id="s1-happy"><span class="label">😊 快樂度</span><span class="value" style="color:${s1.happy>=50?'#27ae60':'#e74c3c'}">${s1.happy}%</span></div>
+    <div class="stat-card" id="s1-saved"><span class="label">🏦 已存款</span><span class="value" style="color:#3498db">$${s1.saved}</span></div>`;
+  $('g1-prog').style.width=(s1.week/4*100)+'%';
+  $('g1-actions').innerHTML=`
+    <button class="btn btn-blue" onclick="g1Act('chore')">🧹 幫忙做家事（賺 $50，快樂 -5）</button>
+    <button class="btn btn-green" onclick="g1Act('snack')">🍦 買零食飲料（-$40，快樂 +15）</button>
+    <button class="btn btn-purple" onclick="g1Act('save')">🏦 存 $100 到撲滿</button>
+    <button class="btn btn-orange" onclick="g1Act('play')">🎮 跟朋友出去玩（-$80，快樂 +25）</button>
+    <button class="btn btn-teal" onclick="g1Act('gift')">🎁 買禮物送朋友（-$60，快樂 +10）</button>
+    <button class="btn btn-red" onclick="g1Act('game')" ${s1.money<120?'disabled':''}>📱 買遊戲點數（-$120，快樂 +20）</button>`;
+}
+function g1Act(type){
+  if(s1.week>4)return;s1.acts++;
+  g1Choices.push({week:s1.week,action:type});
+  if(type==='chore'){s1.money+=50;s1.happy=Math.max(0,s1.happy-5);addLog('g1-log',`[第${s1.week}週] 🧹 幫忙打掃賺了 $50！`,'good');flashStat($('s1-money'),true);}
+  else if(type==='snack'){if(s1.money<40){addLog('g1-log',`[第${s1.week}週] 錢不夠買零食...`,'bad');return;}s1.money-=40;s1.happy=Math.min(100,s1.happy+15);addLog('g1-log',`[第${s1.week}週] 🍦 買了冰淇淋，好開心！`);flashStat($('s1-happy'),true);}
+  else if(type==='save'){if(s1.money<100){addLog('g1-log',`[第${s1.week}週] 不到 $100，存不了...`,'bad');return;}s1.money-=100;s1.saved+=100;addLog('g1-log',`[第${s1.week}週] 🏦 存了 $100！`,'good');flashStat($('s1-saved'),true);}
+  else if(type==='play'){if(s1.money<80){addLog('g1-log',`[第${s1.week}週] 錢不夠出去玩...`,'bad');return;}s1.money-=80;s1.happy=Math.min(100,s1.happy+25);addLog('g1-log',`[第${s1.week}週] 🎮 跟朋友去玩，超快樂！`);flashStat($('s1-happy'),true);}
+  else if(type==='gift'){if(s1.money<60){addLog('g1-log',`[第${s1.week}週] 錢不夠買禮物...`,'bad');return;}s1.money-=60;s1.happy=Math.min(100,s1.happy+10);addLog('g1-log',`[第${s1.week}週] 🎁 朋友收到禮物超開心！`);}
+  else if(type==='game'){if(s1.money<120)return;s1.money-=120;s1.happy=Math.min(100,s1.happy+20);addLog('g1-log',`[第${s1.week}週] 📱 買了遊戲點數，花了不少...`);flashStat($('s1-money'),false);}
+  if(s1.acts>=3){s1.acts=0;s1.week++;if(s1.week<=4){s1.money+=s1.allowance;addLog('g1-log',`📅 === 新的一週！零用錢 +$${s1.allowance} ===`,'highlight');
+    const r=Math.random();if(r<.2){s1.money-=30;addLog('g1-log','⚡ 弄壞文具，買新的 -$30','bad');}else if(r<.35){s1.money+=40;addLog('g1-log','🎉 阿公塞了 $40！','highlight');}else if(r<.45){s1.happy=Math.max(0,s1.happy-10);addLog('g1-log','😢 跟朋友吵架...快樂-10','bad');}}}
+  renderG1();if(s1.week>4)endG1();if(s1.happy<=0){addLog('g1-log','😭 太不開心了...','bad');endG1();}
+}
+function endG1(){
+  let stars,emoji,title,msg;
+  if(s1.happy<=0){stars=1;emoji='😢';title='心情崩潰了...';msg='光存錢不顧快樂也不行！';}
+  else if(s1.saved>=300){stars=5;emoji='🏆';title='理財小天才！';msg=`存 $${s1.saved}，快樂 ${s1.happy}%，完美！`;}
+  else if(s1.saved>=200){stars=4;emoji='🌟';title='很棒的表現！';msg=`存了 $${s1.saved}！`;}
+  else if(s1.saved>=100){stars=3;emoji='👍';title='不錯的開始！';msg=`存了 $${s1.saved}，下次多存一點！`;}
+  else{stars=2;emoji='💪';title='花了不少！';msg=`只存 $${s1.saved}，試試先存再花！`;}
+  // Send data
+  const choiceSummary=g1Choices.map(c=>`W${c.week}:${c.action}`).join(', ');
+  sendToSheet({game:'零用錢大作戰',stars:stars,summary:`${title} 存款$${s1.saved} 快樂${s1.happy}%`,val1:'存款$'+s1.saved,val2:'快樂'+s1.happy+'%',val3:'剩餘$'+s1.money,choices:choiceSummary});
+  $('g1-actions').innerHTML=`<div class="end-screen"><div class="end-emoji">${emoji}</div><h2>${title}</h2><div class="stars">${'⭐'.repeat(stars)}${'☆'.repeat(5-stars)}</div><div class="end-score">存款 $${s1.saved} ｜剩餘 $${s1.money} ｜快樂 ${s1.happy}%</div><div class="end-msg">${msg}</div><div class="end-tip">💡 <b>理財秘訣：</b>收到零用錢先存一部分再花，叫做「先存後花」。也要留一些讓自己開心喔！</div><div class="send-status"></div><div class="end-btns"><button class="btn btn-blue" onclick="initG1()" style="justify-content:center">🔄 再玩一次</button><button class="btn btn-orange" onclick="goMenu()" style="justify-content:center">🏠 回選單</button></div></div>`;
+}
+
+// =============================================
+// GAME 2: 小小商店街
+// =============================================
+let s2;
+function initG2(){
+  s2={cash:300,stock:0,day:1,acts:0,profit:0,rep:50,price:15,cost:8,boost:0};g2Choices=[];
+  $('g2-log').innerHTML='';addLog('g2-log','🏪 小店開張！本金 $300，用智慧賺大錢！','highlight');renderG2();
+}
+function renderG2(){
+  $('g2-stats').innerHTML=`
+    <div class="stat-card" id="s2-cash"><span class="label">💵 現金</span><span class="value" style="color:#e67e22">$${s2.cash}</span></div>
+    <div class="stat-card" id="s2-day"><span class="label">📅 天數</span><span class="value">${s2.day} / 10</span></div>
+    <div class="stat-card" id="s2-stock"><span class="label">📦 庫存</span><span class="value">${s2.stock} 個</span></div>
+    <div class="stat-card" id="s2-rep"><span class="label">⭐ 口碑</span><span class="value" style="color:${s2.rep>=50?'#f5a623':'#e74c3c'}">${s2.rep}%</span></div>`;
+  $('g2-prog').style.width=(s2.day/10*100)+'%';
+  $('g2-actions').innerHTML=`
+    <button class="btn btn-blue" onclick="g2Act('buy5')" ${s2.cash>=s2.cost*5?'':'disabled'}>📦 進貨 5 個（-$${s2.cost*5}，成本 $${s2.cost}/個）</button>
+    <button class="btn btn-purple" onclick="g2Act('buy10')" ${s2.cash>=s2.cost*10?'':'disabled'}>📦📦 大量進 10 個（-$${(s2.cost-1)*10}，省$1/個！）</button>
+    <button class="btn btn-green" onclick="g2Act('sell')" ${s2.stock>0?'':'disabled'}>🛒 開門營業！（售價 $${s2.price}/個）</button>
+    <button class="btn btn-orange" onclick="g2Act('ad')">📣 發傳單宣傳（-$30，口碑 +15）</button>
+    <button class="btn btn-teal" onclick="g2Act('upgrade')">🔧 改善店面（-$80，售價 +$3）</button>
+    <button class="btn btn-pink" onclick="g2Act('sale')">🏷️ 特價促銷（售價 -$3，客人更多！）</button>`;
+}
+function g2Act(type){
+  if(s2.day>10)return;s2.acts++;
+  g2Choices.push({day:s2.day,action:type});
+  if(type==='buy5'){if(s2.cash<s2.cost*5)return;const c=s2.cost*5;s2.cash-=c;s2.stock+=5;addLog('g2-log',`[第${s2.day}天] 📦 進了 5 個，-$${c}`);flashStat($('s2-stock'),true);}
+  else if(type==='buy10'){if(s2.cash<s2.cost*10)return;const c=(s2.cost-1)*10;s2.cash-=c;s2.stock+=10;addLog('g2-log',`[第${s2.day}天] 📦📦 大量進 10 個，-$${c}`,'good');flashStat($('s2-stock'),true);}
+  else if(type==='sell'){if(s2.stock<=0)return;const maxS=Math.min(s2.stock,Math.floor(2+s2.rep/15)+s2.boost);const sold=Math.max(1,Math.floor(maxS*(.7+Math.random()*.6)));const rev=sold*s2.price;s2.stock-=sold;s2.cash+=rev;s2.profit+=rev-sold*s2.cost;s2.boost=0;addLog('g2-log',`[第${s2.day}天] 🛒 賣 ${sold} 個，+$${rev}`,'good');flashStat($('s2-cash'),true);if(sold>=5){s2.rep=Math.min(100,s2.rep+5);addLog('g2-log','⭐ 口碑提升！','good');}}
+  else if(type==='ad'){if(s2.cash<30){addLog('g2-log',`[第${s2.day}天] 錢不夠...`,'bad');return;}s2.cash-=30;s2.rep=Math.min(100,s2.rep+15);addLog('g2-log',`[第${s2.day}天] 📣 發傳單！`);flashStat($('s2-rep'),true);}
+  else if(type==='upgrade'){if(s2.cash<80){addLog('g2-log',`[第${s2.day}天] 錢不夠...`,'bad');return;}s2.cash-=80;s2.price+=3;addLog('g2-log',`[第${s2.day}天] 🔧 升級！售價→$${s2.price}`,'highlight');}
+  else if(type==='sale'){s2.boost+=3;s2.price=Math.max(s2.cost+1,s2.price-3);addLog('g2-log',`[第${s2.day}天] 🏷️ 特價促銷！`);}
+  if(s2.acts>=3){s2.acts=0;s2.day++;if(s2.day<=10){addLog('g2-log',`📅 === 第 ${s2.day} 天 ===`,'highlight');
+    const r=Math.random();if(r<.15){const d=Math.min(s2.stock,2);s2.stock-=d;if(d>0)addLog('g2-log',`🌧️ 下雨！${d}個淋濕了...`,'bad');}
+    else if(r<.25){s2.rep=Math.min(100,s2.rep+10);addLog('g2-log','🌟 網路好評！口碑+10','highlight');}
+    else if(r<.35){s2.cost=Math.max(5,s2.cost-1);addLog('g2-log','📉 供應商降價！成本-$1','good');}
+    else if(r<.42){s2.cost+=2;addLog('g2-log','📈 漲價！成本+$2','bad');}}}
+  renderG2();if(s2.day>10)endG2();if(s2.cash<=0&&s2.stock<=0){addLog('g2-log','💸 破產！','bad');endG2();}
+}
+function endG2(){
+  let stars,emoji,title,msg;
+  if(s2.cash<=0&&s2.stock<=0){stars=1;emoji='😢';title='破產了...';msg='下次控制成本！';}
+  else if(s2.profit>=1000){stars=5;emoji='🏆';title='商業小天才！';msg=`利潤 $${s2.profit}！超厲害！`;}
+  else if(s2.profit>=600){stars=4;emoji='🌟';title='生意興隆！';msg=`利潤 $${s2.profit}！`;}
+  else if(s2.profit>=300){stars=3;emoji='👍';title='小有獲利！';msg=`利潤 $${s2.profit}，加油！`;}
+  else{stars=2;emoji='💪';title='還要加油！';msg=`利潤 $${s2.profit}。`;}
+  const choiceSummary=g2Choices.map(c=>`D${c.day}:${c.action}`).join(', ');
+  sendToSheet({game:'小小商店街',stars:stars,summary:`${title} 利潤$${s2.profit}`,val1:'利潤$'+s2.profit,val2:'現金$'+s2.cash,val3:'口碑'+s2.rep+'%',choices:choiceSummary});
+  $('g2-actions').innerHTML=`<div class="end-screen"><div class="end-emoji">${emoji}</div><h2>${title}</h2><div class="stars">${'⭐'.repeat(stars)}${'☆'.repeat(5-stars)}</div><div class="end-score">利潤 $${s2.profit} ｜現金 $${s2.cash} ｜庫存 ${s2.stock}個</div><div class="end-msg">${msg}</div><div class="end-tip">💡 <b>經商秘訣：</b><br>1️⃣ <b>成本控制</b>：大量進貨比較便宜<br>2️⃣ <b>口碑經營</b>：口碑好才能賣更多<br>3️⃣ <b>風險管理</b>：留一些錢應急！</div><div class="send-status"></div><div class="end-btns"><button class="btn btn-purple" onclick="initG2()" style="justify-content:center">🔄 再玩一次</button><button class="btn btn-orange" onclick="goMenu()" style="justify-content:center">🏠 回選單</button></div></div>`;
+}
+
+// =============================================
+// GAME 3: 存錢買夢想
+// =============================================
+let s3;
+function initG3(){
+  s3={saved:0,cash:200,month:1,acts:0,income:300,goal:3000,patience:70};g3Choices=[];
+  $('g3-log').innerHTML='';addLog('g3-log','🐷 目標：$3,000 的腳踏車！每月零用錢 $300，加油！','highlight');renderG3();
+}
+function renderG3(){
+  const pct=Math.min(100,Math.round(s3.saved/s3.goal*100));
+  $('g3-stats').innerHTML=`
+    <div class="stat-card" id="s3-saved"><span class="label">🐷 撲滿存款</span><span class="value" style="color:#f5a623">$${s3.saved}</span></div>
+    <div class="stat-card" id="s3-month"><span class="label">📅 月份</span><span class="value">${s3.month} / 6</span></div>
+    <div class="stat-card" id="s3-cash"><span class="label">💵 口袋零用</span><span class="value" style="color:#27ae60">$${s3.cash}</span></div>
+    <div class="stat-card" id="s3-patience"><span class="label">💪 耐心指數</span><span class="value" style="color:${s3.patience>=40?'#3498db':'#e74c3c'}">${s3.patience}%</span></div>`;
+  $('g3-prog').style.width=pct+'%';
+  $('g3-actions').innerHTML=`
+    <button class="btn btn-teal" onclick="g3Act('save100')">🐷 存 $100 到撲滿</button>
+    <button class="btn btn-blue" onclick="g3Act('save200')">🐷🐷 狠心存 $200！（耐心 -10）</button>
+    <button class="btn btn-green" onclick="g3Act('treat')">🍦 買零食犒賞（-$50，耐心 +15）</button>
+    <button class="btn btn-orange" onclick="g3Act('chore')">🧹 做家事（賺 $80，耐心 -5）</button>
+    <button class="btn btn-purple" onclick="g3Act('recycle')">♻️ 回收舊物（賺 $40~120）</button>
+    <button class="btn btn-red" onclick="g3Act('splurge')">🎮 大花一筆（-$150，耐心 +25）</button>`;
+}
+function g3Act(type){
+  if(s3.month>6)return;s3.acts++;
+  g3Choices.push({month:s3.month,action:type});
+  if(type==='save100'){if(s3.cash<100){addLog('g3-log',`[第${s3.month}月] 不夠 $100...`,'bad');return;}s3.cash-=100;s3.saved+=100;addLog('g3-log',`[第${s3.month}月] 🐷 存 $100！`,'good');flashStat($('s3-saved'),true);}
+  else if(type==='save200'){if(s3.cash<200){addLog('g3-log',`[第${s3.month}月] 不夠 $200...`,'bad');return;}s3.cash-=200;s3.saved+=200;s3.patience=Math.max(0,s3.patience-10);addLog('g3-log',`[第${s3.month}月] 🐷🐷 存 $200！好心疼！`,'good');flashStat($('s3-saved'),true);}
+  else if(type==='treat'){if(s3.cash<50){addLog('g3-log',`[第${s3.month}月] 買不起零食...`,'bad');return;}s3.cash-=50;s3.patience=Math.min(100,s3.patience+15);addLog('g3-log',`[第${s3.month}月] 🍦 心情好多了！`);flashStat($('s3-patience'),true);}
+  else if(type==='chore'){s3.cash+=80;s3.patience=Math.max(0,s3.patience-5);addLog('g3-log',`[第${s3.month}月] 🧹 做家事賺 $80！`,'good');flashStat($('s3-cash'),true);}
+  else if(type==='recycle'){const amt=40+Math.floor(Math.random()*80);s3.cash+=amt;addLog('g3-log',`[第${s3.month}月] ♻️ 賣舊物得 $${amt}！`,'good');flashStat($('s3-cash'),true);}
+  else if(type==='splurge'){if(s3.cash<150){addLog('g3-log',`[第${s3.month}月] 錢不夠...`,'bad');return;}s3.cash-=150;s3.patience=Math.min(100,s3.patience+25);addLog('g3-log',`[第${s3.month}月] 🎮 超滿足！但離目標遠了...`);flashStat($('s3-patience'),true);}
+  if(s3.acts>=3){s3.acts=0;s3.month++;if(s3.month<=6){s3.cash+=s3.income;addLog('g3-log',`📅 === 第 ${s3.month} 月！+$${s3.income} ===`,'highlight');
+    const r=Math.random();if(r<.15){const b=50+Math.floor(Math.random()*100);s3.cash+=b;addLog('g3-log',`🧧 阿嬤紅包 $${b}！`,'highlight');}
+    else if(r<.25){s3.cash-=40;addLog('g3-log','📖 課本費 -$40','bad');}
+    else if(r<.35){s3.patience=Math.max(0,s3.patience-15);addLog('g3-log','😫 同學炫耀新車...耐心-15','bad');}
+    else if(r<.45){s3.patience=Math.min(100,s3.patience+10);addLog('g3-log','📺 看理財節目！耐心+10','good');}}}
+  renderG3();if(s3.patience<=0){addLog('g3-log','😫 打破撲滿了...','bad');endG3(true);}if(s3.month>6)endG3(false);if(s3.saved>=s3.goal){addLog('g3-log','🎉🎉🎉 存夠了！！！','highlight');endG3(false);}
+}
+function endG3(broke){
+  const pct=Math.round(s3.saved/s3.goal*100),reached=s3.saved>=s3.goal;
+  let stars,emoji,title,msg;
+  if(broke){stars=1;emoji='😢';title='撲滿被打破了...';msg='要堅持但也要適度犒賞！';}
+  else if(reached){stars=5;emoji='🚲';title='買到腳踏車了！！';msg=`存 $${s3.saved}，夢想成真！`;}
+  else if(pct>=70){stars=4;emoji='💪';title='快達成了！';msg=`存 $${s3.saved}（${pct}%）！`;}
+  else if(pct>=40){stars=3;emoji='👍';title='存了不少！';msg=`存 $${s3.saved}（${pct}%），加油！`;}
+  else{stars=2;emoji='📝';title='下次加油！';msg=`只存 $${s3.saved}（${pct}%）。`;}
+  const choiceSummary=g3Choices.map(c=>`M${c.month}:${c.action}`).join(', ');
+  sendToSheet({game:'存錢買夢想',stars:stars,summary:`${title} 撲滿$${s3.saved}/${s3.goal}`,val1:'撲滿$'+s3.saved,val2:'耐心'+s3.patience+'%',val3:'剩餘$'+s3.cash,choices:choiceSummary});
+  $('g3-actions').innerHTML=`<div class="end-screen"><div class="end-emoji">${emoji}</div><h2>${title}</h2><div class="stars">${'⭐'.repeat(stars)}${'☆'.repeat(5-stars)}</div><div class="end-score">撲滿 $${s3.saved} / $${s3.goal}（${pct}%）</div><div class="end-msg">${msg}</div><div class="end-tip">💡 <b>儲蓄秘訣：</b><br>1️⃣ <b>先存後花</b>：收到錢先存<br>2️⃣ <b>適度犒賞</b>：維持耐心<br>3️⃣ <b>多元收入</b>：做家事、回收賺錢<br>4️⃣ <b>目標分割</b>：大目標切小目標</div><div class="send-status"></div><div class="end-btns"><button class="btn btn-orange" onclick="initG3()" style="justify-content:center">🔄 再玩一次</button><button class="btn btn-blue" onclick="goMenu()" style="justify-content:center">🏠 回選單</button></div></div>`;
+}
+</script>
+</body>
+</html>

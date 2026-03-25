@@ -1,0 +1,57 @@
+====================================================
+  Google Apps Script 設定步驟
+====================================================
+
+1. 開一個新的 Google Sheet
+2. 把第一列（A1~J1）填入以下標題：
+   時間 | 玩家 | 遊戲 | 星等 | 結果摘要 | 數值1 | 數值2 | 數值3 | 關鍵選擇 | 原始資料
+
+3. 點選上方選單「擴充功能」→「Apps Script」
+4. 把預設的 Code.gs 內容全部刪除，貼上下面的程式碼：
+
+----------------------------------------------------
+function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var data = JSON.parse(e.postData.contents);
+
+    sheet.appendRow([
+      new Date().toLocaleString('zh-TW'),
+      data.player || '匿名',
+      data.game || '',
+      data.stars || 0,
+      data.summary || '',
+      data.val1 || '',
+      data.val2 || '',
+      data.val3 || '',
+      data.choices || '',
+      JSON.stringify(data)
+    ]);
+
+    return ContentService
+      .createTextOutput(JSON.stringify({status: 'ok'}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({status: 'error', msg: err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  return ContentService
+    .createTextOutput(JSON.stringify({status: 'ok', msg: 'API is running'}))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+----------------------------------------------------
+
+5. 點「儲存」（Ctrl+S）
+6. 點「部署」→「新增部署作業」
+7. 類型選「網頁應用程式」
+8. 執行身分選「我」
+9. 誰可以存取選「所有人」
+10. 按「部署」→ 授權 → 允許
+11. 複製產生的 Web App 網址（長得像 https://script.google.com/macros/s/xxxxx/exec）
+12. 把這個網址貼到遊戲的設定裡面（打開遊戲後會有一個設定按鈕可以貼）
+
+====================================================
