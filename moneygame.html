@@ -97,7 +97,7 @@
 </div>
 
 <script>
-    const API_URL = 'https://script.google.com/macros/s/AKfycbx4XmTjEKbzPdTJdw_3CONiQtAYuMBXGrilQIGCgObuE8qgDp5wrly9il5jHxhVbOkB/exec';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxBEoJfv-tEGHnw3Y9jB4TKQqR9T2SVrKf-i7K4wzQosiboYlFN9wekSA_oPsB6kEwP/exec';
 
     const jobs = {
         delivery: { title: "外送員", bal: 20000, base: 45000, wage: 4000, upCost: 5000, upGain: 200, sWork: 20, sUp: 25, work: "送外送" },
@@ -282,14 +282,16 @@
 
         // 送出資料到 Google Sheet
         sendToSheet({
-            game: '理財生存戰',
+            job: p.title,
             stars: stars,
-            summary: summary,
-            val1: '資產:' + p.bal,
-            val2: '壓力:' + p.stress + '%',
-            val3: '存股:' + p.pass + '張',
-            choices: `工作${workCount}/進修${upCount}/投資${investCount}/休息${funCount}`,
-            job: p.title
+            result: won ? '達標' : '未達標',
+            bal: p.bal,
+            stress: p.stress,
+            stocks: p.pass,
+            workCount: workCount,
+            upCount: upCount,
+            investCount: investCount,
+            funCount: funCount
         });
     }
 
