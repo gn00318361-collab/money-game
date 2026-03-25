@@ -150,7 +150,7 @@ body{font-family:"Microsoft JhengHei",sans-serif;background:#f0f2f5;display:flex
 </div>
 <script>
 // ===== API / GOOGLE SHEET =====
-let API_URL = localStorage.getItem('finGameApiUrl') || '';
+let API_URL = localStorage.getItem('finGameApiUrl') || 'https://script.google.com/macros/s/AKfycbx4XmTjEKbzPdTJdw_3CONiQtAYuMBXGrilQIGCgObuE8qgDp5wrly9il5jHxhVbOkB/exec';
 function openSettings(){$('settings-overlay').classList.add('show');$('api-url-input').value=API_URL;}
 function closeSettings(){$('settings-overlay').classList.remove('show');}
 function saveApiUrl(){API_URL=$('api-url-input').value.trim();localStorage.setItem('finGameApiUrl',API_URL);closeSettings();updateApiStatus();}
