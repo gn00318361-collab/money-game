@@ -124,6 +124,17 @@
     <div id="event-log" class="bg-black p-3 rounded h-32 overflow-y-auto text-xs font-mono text-gray-300">
         <div>> 等待遊戲開始...</div>
     </div>
+
+    <!-- 即時排行榜 -->
+    <div class="mt-4 bg-gray-800 rounded-xl p-4">
+        <div class="flex justify-between items-center mb-3">
+            <h3 class="text-yellow-500 font-bold">🏆 即時排行榜</h3>
+            <span id="lb-online" class="text-xs text-gray-500">在線 0 人</span>
+        </div>
+        <div id="leaderboard-list" class="space-y-1 text-sm">
+            <div class="text-gray-500 text-xs text-center">等待玩家加入...</div>
+        </div>
+    </div>
 </div>
 
 <!-- ===== 事件彈窗 ===== -->
@@ -222,20 +233,65 @@
                     gs.prices[event.target] *= event.impact;
                 }
 
-                // 顯示老師事件彈窗
+                // 推進回合
+                gs.round++;
+                document.getElementById('round-display').textContent = `第 ${gs.round} / ${MAX_ROUNDS} 輪`;
+
+                // 顯示事件彈窗
                 paused = true;
                 document.getElementById('event-modal').style.display = 'flex';
                 document.getElementById('modal-content').className = "p-8 rounded-lg text-center max-w-md event-flash";
-                document.getElementById('event-title').textContent = `🛑 老師發動：市場制裁！`;
+                const icon = event.icon || '🛑';
+                const name = event.name || '老師發動：市場制裁';
+                document.getElementById('event-title').textContent = `${icon} ${name}`;
                 document.getElementById('event-desc').textContent = event.msg;
-                log(`[🛑 老師事件] ${event.msg}`);
-                gs.eventHistory.push('老師：' + event.msg);
+                log(`[第${gs.round}輪] ${icon} ${name}: ${event.msg}`);
+                gs.eventHistory.push(name);
                 document.body.classList.add('shake');
                 setTimeout(() => document.body.classList.remove('shake'), 500);
                 updateUI();
                 syncToFirebase();
+
+                // 檢查是否達到最大輪數
+                if (gs.round >= MAX_ROUNDS) {
+                    setTimeout(() => { closeModal(); winGame(); }, 2000);
+                }
             });
         } catch (e) { console.warn('Firebase listen error:', e.message); }
+    }
+
+    // 即時排行榜監聽
+    function listenLeaderboard() {
+        if (!fbDb) return;
+        try {
+            fbDb.ref('players').on('value', (snapshot) => {
+                const data = snapshot.val();
+                const listEl = document.getElementById('leaderboard-list');
+                if (!data) { listEl.innerHTML = '<div class="text-gray-500 text-xs text-center">等待玩家加入...</div>'; return; }
+
+                const now = Date.now();
+                const players = Object.entries(data)
+                    .map(([name, info]) => ({ name, score: info.score || 0, online: now - info.lastUpdate < 10000 }))
+                    .sort((a, b) => b.score - a.score);
+
+                const onlineCount = players.filter(p => p.online).length;
+                document.getElementById('lb-online').textContent = `在線 ${onlineCount} 人`;
+
+                const medals = ['🥇', '🥈', '🥉'];
+                listEl.innerHTML = players.slice(0, 10).map((p, i) => {
+                    const medal = i < 3 ? medals[i] : `<span class="text-gray-500 w-5 inline-block text-center">${i + 1}</span>`;
+                    const isMe = p.name === playerName;
+                    const dead = p.score <= 0;
+                    const dot = p.online ? '🟢' : '⚫';
+                    const nameClass = isMe ? 'text-yellow-400 font-bold' : dead ? 'text-gray-500 line-through' : 'text-gray-300';
+                    const scoreText = dead ? '💀 破產' : `$${p.score.toLocaleString()}`;
+                    return `<div class="flex justify-between items-center px-2 py-1 rounded ${isMe ? 'bg-yellow-900/30' : ''}">
+                        <span>${medal} <span class="text-xs">${dot}</span> <span class="${nameClass}">${p.name}${isMe ? ' (你)' : ''}</span></span>
+                        <span class="font-mono text-xs ${dead ? 'text-red-500' : 'text-green-400'}">${scoreText}</span>
+                    </div>`;
+                }).join('');
+            });
+        } catch (e) { console.warn('Leaderboard listen error:', e.message); }
     }
 
     const blackSwans = [
@@ -275,6 +331,7 @@
         updateUI();
         syncToFirebase();
         listenTeacherEvents();
+        listenLeaderboard();
 
         if (timerInterval) clearInterval(timerInterval);
         timerInterval = setInterval(tick, 1000);
@@ -282,15 +339,8 @@
 
     function tick() {
         if (paused) return;
-        gs.timeLeft--;
-        if (gs.timeLeft <= 0) {
-            triggerEvent();
-            gs.timeLeft = 10;
-            gs.round++;
-            if (gs.round > MAX_ROUNDS) { winGame(); return; }
-            document.getElementById('round-display').textContent = `第 ${gs.round} / ${MAX_ROUNDS} 輪`;
-        }
-        document.getElementById('timer').textContent = `下一波事件: ${gs.timeLeft}s`;
+        // 不再本地倒數觸發事件，改由老師統一發送
+        document.getElementById('timer').textContent = `等待老師發動事件...`;
 
         // 市場自然波動
         gs.prevPrices = { ...gs.prices };
@@ -440,6 +490,7 @@
         try {
             if (fbDb) {
                 fbDb.ref('global_event').off();
+                fbDb.ref('players').off();
                 if (playerName) fbDb.ref('players/' + playerName).remove();
             }
         } catch (e) { console.warn('Firebase cleanup error:', e.message); }

@@ -6,31 +6,74 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
+    <style>
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .pulse { animation: pulse 1s infinite; }
+    </style>
 </head>
-<body class="bg-slate-900 text-white p-10">
-    <div class="max-w-2xl mx-auto border-2 border-red-500 p-8 rounded-2xl bg-slate-800 shadow-2xl">
-        <h1 class="text-4xl font-black text-red-500 mb-8 text-center">🛑 市場制裁者控制台</h1>
+<body class="bg-slate-900 text-white p-6 md:p-10">
+    <div class="max-w-3xl mx-auto">
 
-        <div class="grid grid-cols-1 gap-6">
-            <button onclick="sendCrisis('tech', 0.5, '科技股崩盤！伺服器大斷電！')" class="bg-red-600 hover:bg-red-700 p-6 rounded-xl text-2xl font-bold transition-all transform active:scale-95">
-                📉 發動：科技股腰斬 (-50%)
-            </button>
+        <!-- 標題 -->
+        <h1 class="text-4xl font-black text-red-500 mb-2 text-center">🛑 市場制裁者控制台</h1>
+        <p class="text-center text-gray-400 mb-6">統一發送事件，全班同步接收</p>
 
-            <button onclick="sendCrisis('energy', 0.4, '能源危機！全球大停電！')" class="bg-orange-600 hover:bg-orange-700 p-6 rounded-xl text-2xl font-bold transition-all transform active:scale-95">
-                🔥 發動：能源股暴跌 (-60%)
-            </button>
+        <!-- 自動模式面板 -->
+        <div class="bg-slate-800 border-2 border-yellow-600 rounded-2xl p-6 mb-6">
+            <h2 class="text-xl font-bold text-yellow-500 mb-4">⚡ 自動發送模式</h2>
+            <p class="text-sm text-gray-400 mb-4">開啟後每 10 秒自動隨機發送一個黑天鵝事件，共 10 輪。全班收到一樣的事件。</p>
 
-            <button onclick="sendCrisis('cash', 0.7, '惡性通膨！現金購買力下降！')" class="bg-yellow-600 hover:bg-yellow-700 p-6 rounded-xl text-2xl font-bold transition-all transform active:scale-95">
-                💸 發動：現金貶值 (-30%)
-            </button>
+            <div class="flex items-center gap-4 mb-4">
+                <button id="auto-btn" onclick="toggleAuto()" class="bg-yellow-600 hover:bg-yellow-700 px-8 py-3 rounded-xl font-bold text-xl transition-all transform active:scale-95">
+                    ▶️ 開始自動發送
+                </button>
+                <div id="auto-status" class="text-gray-500">尚未啟動</div>
+            </div>
 
-            <div class="h-1 bg-slate-700 my-4"></div>
-
-            <button onclick="resetGame()" class="bg-gray-500 hover:bg-gray-600 p-4 rounded-xl text-xl font-bold">
-                🔄 重置所有玩家數據 (下一班開始用)
-            </button>
+            <div class="flex items-center gap-6 text-sm">
+                <div>
+                    <span class="text-gray-400">目前輪數：</span>
+                    <span id="round-display" class="text-xl font-bold text-white">0 / 10</span>
+                </div>
+                <div>
+                    <span class="text-gray-400">倒數：</span>
+                    <span id="countdown" class="text-xl font-bold text-yellow-400">--</span>
+                </div>
+                <div>
+                    <span class="text-gray-400">在線人數：</span>
+                    <span id="online-count" class="text-xl font-bold text-green-400">0</span>
+                </div>
+            </div>
         </div>
-        <p id="status" class="mt-6 text-center text-green-400 font-mono"></p>
+
+        <!-- 事件紀錄 -->
+        <div class="bg-slate-800 rounded-2xl p-6 mb-6">
+            <h2 class="text-lg font-bold text-gray-300 mb-3">📋 已發送事件紀錄</h2>
+            <div id="event-log" class="bg-black rounded-lg p-3 h-40 overflow-y-auto text-xs font-mono text-gray-400">
+                <div>> 等待開始...</div>
+            </div>
+        </div>
+
+        <!-- 手動發送 -->
+        <div class="bg-slate-800 border-2 border-red-800 rounded-2xl p-6 mb-6">
+            <h2 class="text-xl font-bold text-red-400 mb-4">🎯 手動發送單一事件</h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3" id="manual-buttons"></div>
+        </div>
+
+        <!-- 管理 -->
+        <div class="bg-slate-800 rounded-2xl p-6">
+            <h2 class="text-lg font-bold text-gray-400 mb-4">⚙️ 管理</h2>
+            <div class="flex gap-4">
+                <button onclick="resetGame()" class="bg-gray-600 hover:bg-gray-700 px-6 py-3 rounded-xl font-bold transition">
+                    🔄 重置所有玩家數據
+                </button>
+                <button onclick="resetRound()" class="bg-gray-600 hover:bg-gray-700 px-6 py-3 rounded-xl font-bold transition">
+                    🔁 重置輪數（重新開始）
+                </button>
+            </div>
+        </div>
+
+        <p id="status" class="mt-6 text-center text-green-400 font-mono text-sm"></p>
     </div>
 
     <script>
@@ -45,24 +88,151 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        function sendCrisis(target, impact, msg) {
-            const eventId = Date.now();
+        // 跟 monetgame.html 完全一樣的 12 個黑天鵝事件
+        const blackSwans = [
+            { name: "矽谷大地震", target: "tech", impact: 0.35, msg: "伺服器中心全毀！科技股暴跌 65%！", icon: "🌋" },
+            { name: "AI 泡沫破裂", target: "tech", impact: 0.5, msg: "AI 概念股崩盤！科技股暴跌 50%！", icon: "🤖" },
+            { name: "晶片禁令", target: "tech", impact: 0.6, msg: "各國禁止出口晶片，科技股大跌 40%！", icon: "🔒" },
+            { name: "石油禁運", target: "energy", impact: 2.5, msg: "能源供給中斷，能源股瘋漲 150%！", icon: "🛢️" },
+            { name: "綠能革命", target: "energy", impact: 0.4, msg: "化石燃料被淘汰，能源股暴跌 60%！", icon: "🌿" },
+            { name: "中東戰爭", target: "energy", impact: 1.8, msg: "油價飆升，能源股大漲 80%！", icon: "⚔️" },
+            { name: "金融海嘯", target: "cash", impact: 0.6, msg: "惡性通膨！你的現金購買力縮水 40%！", icon: "🌊" },
+            { name: "央行升息", target: "gold", impact: 0.5, msg: "利率飆升，黃金暴跌 50%！", icon: "🏦" },
+            { name: "貨幣崩潰", target: "gold", impact: 2.0, msg: "法幣信心崩潰，黃金翻倍暴漲！", icon: "💎" },
+            { name: "全球疫情", target: "all_down", impact: 0.6, msg: "全球封城！所有資產暴跌 40%！", icon: "🦠" },
+            { name: "政府紓困", target: "all_up", impact: 1.3, msg: "大撒幣救市！所有資產上漲 30%！", icon: "💸" },
+            { name: "駭客攻擊", target: "tech", impact: 0.45, msg: "金融系統被駭！科技股暴跌 55%！", icon: "👾" },
+        ];
+
+        let autoInterval = null;
+        let autoRunning = false;
+        let currentRound = 0;
+        let countdown = 10;
+        let countdownInterval = null;
+        const MAX_ROUNDS = 10;
+
+        // 產生手動按鈕
+        const btnContainer = document.getElementById('manual-buttons');
+        blackSwans.forEach((ev, i) => {
+            const colorMap = { tech: 'green', energy: 'blue', gold: 'yellow', cash: 'orange', all_down: 'red', all_up: 'emerald' };
+            const color = colorMap[ev.target] || 'gray';
+            const btn = document.createElement('button');
+            btn.className = `bg-${color}-700 hover:bg-${color}-600 p-3 rounded-lg font-bold text-sm transition-all transform active:scale-95 text-left`;
+            btn.innerHTML = `${ev.icon} ${ev.name}<br><span class="text-xs opacity-70">${ev.msg}</span>`;
+            btn.onclick = () => sendEvent(ev);
+            btnContainer.appendChild(btn);
+        });
+
+        function sendEvent(ev) {
             db.ref('global_event').set({
-                id: eventId,
-                target: target,
-                impact: impact,
-                msg: msg
+                id: Date.now(),
+                target: ev.target,
+                impact: ev.impact,
+                msg: ev.msg,
+                name: ev.name,
+                icon: ev.icon
             });
-            document.getElementById('status').innerText = `已發動：${msg}`;
-            setTimeout(() => { document.getElementById('status').innerText = ""; }, 3000);
+            logEvent(`${ev.icon} ${ev.name}: ${ev.msg}`);
+            showStatus(`已發送：${ev.icon} ${ev.name}`);
+        }
+
+        function toggleAuto() {
+            if (autoRunning) {
+                stopAuto();
+            } else {
+                startAuto();
+            }
+        }
+
+        function startAuto() {
+            autoRunning = true;
+            currentRound = 0;
+            countdown = 10;
+            document.getElementById('auto-btn').innerHTML = '⏸️ 停止自動發送';
+            document.getElementById('auto-btn').className = 'bg-red-600 hover:bg-red-700 px-8 py-3 rounded-xl font-bold text-xl transition-all transform active:scale-95';
+            document.getElementById('auto-status').innerHTML = '<span class="text-yellow-400 pulse">🔴 自動發送中...</span>';
+            document.getElementById('round-display').textContent = `0 / ${MAX_ROUNDS}`;
+            logEvent('⚡ 自動發送模式啟動！');
+
+            // 立刻發第一個
+            fireNextEvent();
+
+            // 每秒倒數
+            countdownInterval = setInterval(() => {
+                countdown--;
+                document.getElementById('countdown').textContent = `${countdown}s`;
+                if (countdown <= 0) {
+                    fireNextEvent();
+                }
+            }, 1000);
+        }
+
+        function fireNextEvent() {
+            if (!autoRunning) return;
+            currentRound++;
+
+            if (currentRound > MAX_ROUNDS) {
+                stopAuto();
+                logEvent('🏁 10 輪已結束！遊戲完成！');
+                showStatus('🏁 10 輪全部發送完畢！');
+                return;
+            }
+
+            // 隨機挑選事件
+            const ev = blackSwans[Math.floor(Math.random() * blackSwans.length)];
+            sendEvent(ev);
+            document.getElementById('round-display').textContent = `${currentRound} / ${MAX_ROUNDS}`;
+            countdown = 10;
+            document.getElementById('countdown').textContent = `${countdown}s`;
+        }
+
+        function stopAuto() {
+            autoRunning = false;
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+            document.getElementById('auto-btn').innerHTML = '▶️ 開始自動發送';
+            document.getElementById('auto-btn').className = 'bg-yellow-600 hover:bg-yellow-700 px-8 py-3 rounded-xl font-bold text-xl transition-all transform active:scale-95';
+            document.getElementById('auto-status').textContent = '已停止';
+            document.getElementById('countdown').textContent = '--';
+        }
+
+        function resetRound() {
+            stopAuto();
+            currentRound = 0;
+            document.getElementById('round-display').textContent = `0 / ${MAX_ROUNDS}`;
+            logEvent('🔁 輪數已重置');
+            showStatus('輪數已重置，可重新開始');
         }
 
         function resetGame() {
-            if(confirm("確定要刪除所有學生數據嗎？")) {
+            if (confirm("確定要刪除所有學生數據嗎？")) {
                 db.ref('players').remove();
-                alert("數據已清空！");
+                logEvent('🔄 所有玩家數據已清空');
+                showStatus('數據已清空！');
             }
         }
+
+        function logEvent(msg) {
+            const el = document.getElementById('event-log');
+            const time = new Date().toLocaleTimeString('zh-TW');
+            el.innerHTML += `<div>[${time}] ${msg}</div>`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function showStatus(msg) {
+            const el = document.getElementById('status');
+            el.textContent = msg;
+            setTimeout(() => { el.textContent = ''; }, 3000);
+        }
+
+        // 監聽在線人數
+        db.ref('players').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (!data) { document.getElementById('online-count').textContent = '0'; return; }
+            const now = Date.now();
+            const online = Object.values(data).filter(p => now - p.lastUpdate < 10000).length;
+            document.getElementById('online-count').textContent = online;
+        });
     </script>
 </body>
 </html>

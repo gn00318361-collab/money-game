@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>理財生存戰 — QR Code</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Noto Sans TC', sans-serif; background: #f8f9fa; }
+
+  /* 列印樣式 */
+  @media print {
+    body { background: white; }
+    .no-print { display: none !important; }
+    .card { break-inside: avoid; box-shadow: none !important; border: 2px solid #ddd !important; }
+    .container { gap: 16px !important; padding: 10px !important; }
+  }
+
+  .header { text-align: center; padding: 30px 20px 10px; }
+  .header h1 { font-size: 2em; font-weight: 900; color: #1a1a2e; }
+  .header p { color: #666; margin-top: 6px; font-size: 0.95em; }
+
+  .container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    max-width: 900px;
+    margin: 20px auto;
+    padding: 0 24px 40px;
+  }
+
+  .card {
+    background: white;
+    border-radius: 16px;
+    padding: 28px 24px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    transition: transform 0.2s;
+  }
+  .card:hover { transform: translateY(-3px); }
+
+  .card .icon { font-size: 2.2em; margin-bottom: 8px; }
+  .card .title { font-size: 1.2em; font-weight: 900; color: #1a1a2e; margin-bottom: 4px; }
+  .card .desc { font-size: 0.82em; color: #888; margin-bottom: 16px; line-height: 1.5; }
+
+  .qr-wrap {
+    display: inline-block;
+    padding: 12px;
+    background: white;
+    border-radius: 12px;
+    border: 3px solid #eee;
+    margin-bottom: 12px;
+  }
+  .qr-wrap img { display: block; }
+
+  .card .url {
+    font-size: 0.7em;
+    color: #aaa;
+    word-break: break-all;
+    line-height: 1.4;
+  }
+
+  .card.game1 { border-top: 5px solid #f59e0b; }
+  .card.game2 { border-top: 5px solid #ef4444; }
+  .card.game3 { border-top: 5px solid #10b981; }
+  .card.game4 { border-top: 5px solid #6366f1; }
+
+  .print-btn {
+    display: block;
+    margin: 0 auto 30px;
+    padding: 12px 36px;
+    font-size: 1em;
+    font-weight: 700;
+    color: white;
+    background: #1a1a2e;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .print-btn:hover { background: #2d2d4a; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>💰 理財生存戰</h1>
+  <p>掃描 QR Code 直接開始遊戲！</p>
+</div>
+
+<button class="print-btn no-print" onclick="window.print()">🖨️ 列印此頁</button>
+
+<div class="container">
+  <div class="card game1" id="card-lobby">
+    <div class="icon">🏠</div>
+    <div class="title">遊戲大廳</div>
+    <div class="desc">所有遊戲入口</div>
+    <div class="qr-wrap" id="qr-lobby"></div>
+    <div class="url">gn00318361-collab.github.io/money-game/finance-games.html</div>
+  </div>
+
+  <div class="card game2" id="card-dice">
+    <div class="icon">🎲</div>
+    <div class="title">理財生存戰（骰子版）</div>
+    <div class="desc">擲骰子 × 理財決策<br>目標 $200,000 過關</div>
+    <div class="qr-wrap" id="qr-dice"></div>
+    <div class="url">gn00318361-collab.github.io/money-game/moneygame.html</div>
+  </div>
+
+  <div class="card game3" id="card-stock">
+    <div class="icon">📈</div>
+    <div class="title">金融生存戰（股市版）</div>
+    <div class="desc">黑天鵝事件 × 股票交易<br>撐過 10 輪不破產</div>
+    <div class="qr-wrap" id="qr-stock"></div>
+    <div class="url">gn00318361-collab.github.io/money-game/monetgame.html</div>
+  </div>
+
+  <div class="card game4" id="card-board">
+    <div class="icon">🏆</div>
+    <div class="title">即時排行榜</div>
+    <div class="desc">全班分數即時顯示<br>投影到大螢幕觀戰</div>
+    <div class="qr-wrap" id="qr-board"></div>
+    <div class="url">gn00318361-collab.github.io/money-game/leaderboard.html</div>
+  </div>
+</div>
+
+<script>
+const BASE = 'https://gn00318361-collab.github.io/money-game/';
+const codes = [
+  { id: 'qr-lobby', url: BASE + 'finance-games.html' },
+  { id: 'qr-dice',  url: BASE + 'moneygame.html' },
+  { id: 'qr-stock', url: BASE + 'monetgame.html' },
+  { id: 'qr-board', url: BASE + 'leaderboard.html' },
+];
+
+codes.forEach(({ id, url }) => {
+  const qr = qrcode(0, 'M');
+  qr.addData(url);
+  qr.make();
+  document.getElementById(id).innerHTML = qr.createImgTag(5, 8);
+});
+</script>
+</body>
+</html>
