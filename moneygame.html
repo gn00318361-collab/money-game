@@ -2,58 +2,229 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>理財生存戰：助教版</title>
+    <title>理財生存戰：骰子版</title>
     <style>
         :root { --primary: #2c3e50; --accent: #e67e22; }
+        * { box-sizing: border-box; }
         body { font-family: "Microsoft JhengHei", sans-serif; background: #dfe6e9; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        #game-container { display: flex; gap: 20px; width: 95%; max-width: 750px; }
+        #game-container { display: flex; gap: 20px; width: 95%; max-width: 800px; }
 
-        /* 側邊助教區 */
         #helper-box { width: 200px; background: white; border-radius: 20px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; display: flex; flex-direction: column; justify-content: center; }
         #avatar { font-size: 80px; margin-bottom: 10px; transition: 0.3s; }
         #helper-msg { font-size: 0.9rem; color: #555; background: #f1f2f6; padding: 10px; border-radius: 10px; position: relative; }
         #helper-msg::after { content: ''; position: absolute; left: 50%; top: -10px; transform: translateX(-50%); border-width: 0 10px 10px 10px; border-style: solid; border-color: transparent transparent #f1f2f6 transparent; }
 
-        /* 主遊戲區 */
         #game-box { flex: 1; background: white; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-top: 10px solid var(--primary); overflow: hidden; padding-bottom: 20px; }
         .screen { padding: 20px; text-align: center; }
         .hidden { display: none; }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
         .stat { background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #eee; }
         .label { font-size: 0.7rem; color: #95a5a6; display: block; }
         .val { font-size: 1rem; font-weight: bold; }
-        .btn { width: 100%; padding: 10px; margin-bottom: 8px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; }
+        .expense-bar { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 6px 10px; margin-bottom: 10px; font-size: 0.78rem; color: #856404; }
+        .btn { width: 100%; padding: 10px; margin-bottom: 8px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; font-size: 0.95rem; }
         .btn:hover { opacity: 0.85; transform: scale(0.98); }
         .btn:disabled { opacity: 0.4; cursor: not-allowed; }
         .btn-work { background: #3498db; }
         .btn-up { background: #f39c12; }
         .btn-invest { background: #9b59b6; }
         .btn-fun { background: #27ae60; }
-        #log { height: 80px; overflow-y: auto; background: #2c3e50; color: #ecf0f1; padding: 10px; font-size: 0.8rem; text-align: left; border-radius: 8px; }
+        #log { height: 90px; overflow-y: auto; background: #2c3e50; color: #ecf0f1; padding: 10px; font-size: 0.8rem; text-align: left; border-radius: 8px; margin-top: 10px; }
 
-        /* 玩家輸入 */
         .player-input { margin-bottom: 15px; }
         .player-input input { padding: 8px 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem; width: 80%; text-align: center; }
         .player-input input:focus { border-color: var(--accent); outline: none; }
 
-        /* 結算畫面 */
-        #end-screen h2 { margin-bottom: 5px; }
-        .end-stats { background: #f8f9fa; padding: 15px; border-radius: 10px; margin: 10px 0; text-align: left; font-size: 0.9rem; line-height: 1.8; }
-        .star { color: #f39c12; font-size: 1.5rem; }
-        .send-status { font-size: 0.8rem; margin-top: 8px; min-height: 1.2em; }
-        .send-status.ok { color: #27ae60; }
-        .send-status.fail { color: #e74c3c; }
+        /* ===== 骰子 ===== */
+        #dice-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.55); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 999;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        #dice-overlay.show { opacity: 1; pointer-events: auto; }
+        #dice-action-label { color: #fff; font-size: 1.3rem; font-weight: bold; margin-bottom: 18px; text-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+        .dice-row { display: flex; gap: 24px; }
+        .dice-cube { width: 100px; height: 100px; perspective: 600px; }
+        .dice-inner { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.1s; }
+        .dice-inner.rolling { animation: diceRoll 0.12s linear infinite; }
+        .dice-face {
+            position: absolute; width: 100px; height: 100px;
+            background: #fff; border: 3px solid #ccc; border-radius: 14px;
+            display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+            padding: 12px; gap: 0;
+        }
+        .dice-face .dot { width: 18px; height: 18px; background: #2c3e50; border-radius: 50%; }
+        .face-1 { transform: rotateY(0deg) translateZ(50px); }
+        .face-2 { transform: rotateY(180deg) translateZ(50px); }
+        .face-3 { transform: rotateY(-90deg) translateZ(50px); }
+        .face-4 { transform: rotateY(90deg) translateZ(50px); }
+        .face-5 { transform: rotateX(90deg) translateZ(50px); }
+        .face-6 { transform: rotateX(-90deg) translateZ(50px); }
+        @keyframes diceRoll {
+            0%   { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+            25%  { transform: rotateX(90deg) rotateY(90deg) rotateZ(0deg); }
+            50%  { transform: rotateX(180deg) rotateY(180deg) rotateZ(90deg); }
+            75%  { transform: rotateX(270deg) rotateY(90deg) rotateZ(180deg); }
+            100% { transform: rotateX(360deg) rotateY(360deg) rotateZ(270deg); }
+        }
+        #dice-result-text { color: #f1c40f; font-size: 1.8rem; font-weight: bold; margin-top: 20px; text-shadow: 0 2px 8px rgba(0,0,0,0.5); min-height: 2em; }
+        #dice-effect-text { color: #ecf0f1; font-size: 1rem; margin-top: 6px; min-height: 1.5em; }
+        .dots-1 { display: grid; place-items: center; }
+        .dots-2 { display: flex; justify-content: space-between; padding: 18px; }
+        .dots-2 .dot:last-child { align-self: flex-end; }
+        .dots-3 { display: flex; justify-content: space-between; padding: 16px; }
+        .dots-3 .dot:nth-child(2) { align-self: center; }
+        .dots-3 .dot:nth-child(3) { align-self: flex-end; }
+        .dots-4 { display: grid; grid-template-columns: 1fr 1fr; place-items: center; padding: 16px; gap: 14px; }
+        .dots-5 { display: grid; grid-template-columns: 1fr 1fr; place-items: center; padding: 14px; gap: 10px; }
+        .dots-5 .dot:nth-child(5) { grid-column: 1 / -1; }
+        .dots-6 { display: grid; grid-template-columns: 1fr 1fr; place-items: center; padding: 14px; gap: 8px; }
 
-        /* RWD 手機 */
+        /* ===== GAME OVER 全螢幕 ===== */
+        #gameover-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 2000;
+            opacity: 0; pointer-events: none; transition: opacity 0.5s;
+        }
+        #gameover-overlay.show {
+            opacity: 1; pointer-events: auto;
+            background: rgba(120,0,0,0.92);
+        }
+        #gameover-overlay.show .go-skull { animation: skullPulse 0.6s ease-in-out infinite alternate; }
+        #gameover-overlay.show .go-title { animation: goShake 0.15s ease-in-out 6; }
+        .go-skull { font-size: 120px; margin-bottom: 10px; filter: drop-shadow(0 0 30px rgba(255,0,0,0.8)); }
+        .go-title { font-size: 3.5rem; font-weight: 900; color: #fff; text-shadow: 0 0 20px #ff0000, 0 0 60px #ff0000, 0 4px 0 #800000; letter-spacing: 8px; margin-bottom: 10px; }
+        .go-cause { font-size: 1.4rem; color: #ffcccc; margin-bottom: 5px; }
+        .go-detail { font-size: 1rem; color: #ff9999; margin-bottom: 20px; max-width: 400px; line-height: 1.6; }
+        .go-stats { background: rgba(0,0,0,0.4); padding: 15px 25px; border-radius: 12px; color: #ffdddd; font-size: 0.9rem; line-height: 1.8; text-align: left; margin-bottom: 20px; }
+        .go-btn { padding: 14px 40px; background: #c0392b; color: white; border: 3px solid #e74c3c; border-radius: 12px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .go-btn:hover { background: #e74c3c; transform: scale(1.05); }
+        .send-status-go { font-size: 0.8rem; margin-top: 10px; min-height: 1.2em; color: #ffcccc; }
+        @keyframes skullPulse { 0% { transform: scale(1); } 100% { transform: scale(1.15); } }
+        @keyframes goShake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+        @keyframes screenFlash { 0% { background: rgba(255,0,0,0.5); } 100% { background: rgba(120,0,0,0.92); } }
+
+        /* 成功畫面 */
+        #win-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 2000;
+            opacity: 0; pointer-events: none; transition: opacity 0.5s;
+        }
+        #win-overlay.show { opacity: 1; pointer-events: auto; background: rgba(0,80,40,0.92); }
+        .win-trophy { font-size: 100px; margin-bottom: 10px; animation: trophyBounce 0.5s ease-in-out infinite alternate; }
+        .win-title { font-size: 2.5rem; font-weight: 900; color: #f1c40f; text-shadow: 0 0 20px rgba(241,196,15,0.6), 0 4px 0 #c7960a; margin-bottom: 10px; }
+        .win-detail { font-size: 1rem; color: #d5f5e3; max-width: 400px; line-height: 1.6; margin-bottom: 15px; }
+        .win-stats { background: rgba(0,0,0,0.3); padding: 15px 25px; border-radius: 12px; color: #d5f5e3; font-size: 0.9rem; line-height: 1.8; text-align: left; margin-bottom: 20px; }
+        .win-star { color: #f1c40f; font-size: 2rem; margin-bottom: 10px; }
+        .win-btn { padding: 14px 40px; background: #27ae60; color: white; border: 3px solid #2ecc71; border-radius: 12px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .win-btn:hover { background: #2ecc71; transform: scale(1.05); }
+        .send-status-win { font-size: 0.8rem; margin-top: 10px; min-height: 1.2em; color: #d5f5e3; }
+        @keyframes trophyBounce { 0% { transform: translateY(0) rotate(-5deg); } 100% { transform: translateY(-10px) rotate(5deg); } }
+
+        /* 普通失敗（未達標但沒死）*/
+        #fail-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 2000;
+            opacity: 0; pointer-events: none; transition: opacity 0.5s;
+        }
+        #fail-overlay.show { opacity: 1; pointer-events: auto; background: rgba(40,40,60,0.92); }
+        .fail-icon { font-size: 100px; margin-bottom: 10px; }
+        .fail-title { font-size: 2.2rem; font-weight: 900; color: #e74c3c; text-shadow: 0 2px 0 #800000; margin-bottom: 8px; }
+        .fail-detail { font-size: 1rem; color: #cccccc; max-width: 400px; line-height: 1.6; margin-bottom: 15px; }
+        .fail-stats { background: rgba(0,0,0,0.3); padding: 15px 25px; border-radius: 12px; color: #cccccc; font-size: 0.9rem; line-height: 1.8; text-align: left; margin-bottom: 20px; }
+        .fail-btn { padding: 14px 40px; background: #7f8c8d; color: white; border: 3px solid #95a5a6; border-radius: 12px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .fail-btn:hover { background: #95a5a6; transform: scale(1.05); }
+        .send-status-fail { font-size: 0.8rem; margin-top: 10px; min-height: 1.2em; color: #cccccc; }
+
+        /* 特效 */
+        .flash-good { animation: flashGood 0.5s; }
+        .flash-bad { animation: flashBad 0.5s; }
+        @keyframes flashGood { 0%,100%{ background:#f8f9fa; } 50%{ background:#d5f5e3; } }
+        @keyframes flashBad { 0%,100%{ background:#f8f9fa; } 50%{ background:#fadbd8; } }
+
+        /* 全螢幕紅色閃爍（死亡瞬間） */
+        #death-flash {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: red; z-index: 1999; opacity: 0; pointer-events: none;
+        }
+        #death-flash.flash { animation: deathFlash 0.6s ease-out; }
+        @keyframes deathFlash { 0% { opacity: 0.8; } 100% { opacity: 0; } }
+
+        /* 壓力條警告 */
+        .stress-danger { animation: stressPulse 0.5s ease-in-out infinite alternate; }
+        @keyframes stressPulse { 0% { background: #f8f9fa; } 100% { background: #fadbd8; border-color: #e74c3c; } }
+
+        /* RWD */
         @media (max-width: 600px) {
             #game-container { flex-direction: column; }
             #helper-box { width: auto; flex-direction: row; gap: 10px; padding: 12px; }
             #avatar { font-size: 50px; margin-bottom: 0; }
             #helper-msg::after { display: none; }
+            .dice-cube { width: 80px; height: 80px; }
+            .dice-face { width: 80px; height: 80px; padding: 10px; }
+            .dice-face .dot { width: 14px; height: 14px; }
+            .face-1 { transform: rotateY(0deg) translateZ(40px); }
+            .face-2 { transform: rotateY(180deg) translateZ(40px); }
+            .face-3 { transform: rotateY(-90deg) translateZ(40px); }
+            .face-4 { transform: rotateY(90deg) translateZ(40px); }
+            .face-5 { transform: rotateX(90deg) translateZ(40px); }
+            .face-6 { transform: rotateX(-90deg) translateZ(40px); }
+            .go-title { font-size: 2.5rem; }
+            .go-skull { font-size: 80px; }
         }
     </style>
 </head>
 <body>
+
+<!-- 死亡紅色閃光 -->
+<div id="death-flash"></div>
+
+<!-- 骰子遮罩 -->
+<div id="dice-overlay">
+    <div id="dice-action-label"></div>
+    <div class="dice-row">
+        <div class="dice-cube"><div class="dice-inner" id="dice1"></div></div>
+        <div class="dice-cube"><div class="dice-inner" id="dice2"></div></div>
+    </div>
+    <div id="dice-result-text"></div>
+    <div id="dice-effect-text"></div>
+</div>
+
+<!-- GAME OVER 畫面 -->
+<div id="gameover-overlay">
+    <div class="go-skull">💀</div>
+    <div class="go-title">GAME OVER</div>
+    <div class="go-cause" id="go-cause"></div>
+    <div class="go-detail" id="go-detail"></div>
+    <div class="go-stats" id="go-stats"></div>
+    <div class="send-status-go" id="send-status-go"></div>
+    <button class="go-btn" onclick="restart()">💀 再挑戰一次</button>
+</div>
+
+<!-- 成功畫面 -->
+<div id="win-overlay">
+    <div class="win-trophy">🏆</div>
+    <div class="win-title">挑戰成功！</div>
+    <div class="win-star" id="win-stars"></div>
+    <div class="win-detail" id="win-detail"></div>
+    <div class="win-stats" id="win-stats"></div>
+    <div class="send-status-win" id="send-status-win"></div>
+    <button class="win-btn" onclick="restart()">🔄 再玩一次</button>
+</div>
+
+<!-- 普通失敗（活著但沒達標）-->
+<div id="fail-overlay">
+    <div class="fail-icon">😞</div>
+    <div class="fail-title">未達成目標</div>
+    <div class="fail-detail" id="fail-detail"></div>
+    <div class="fail-stats" id="fail-stats"></div>
+    <div class="send-status-fail" id="send-status-fail"></div>
+    <button class="fail-btn" onclick="restart()">🔄 再試一次</button>
+</div>
 
 <div id="game-container">
     <div id="helper-box">
@@ -62,9 +233,9 @@
     </div>
 
     <div id="game-box">
-        <!-- 開始畫面 -->
         <div id="start-screen" class="screen">
-            <h2>🎯 理財生存戰</h2>
+            <h2>🎲 理財生存戰：骰子版</h2>
+            <p style="font-size:0.85rem;color:#e74c3c;margin-top:0;font-weight:bold">⚠️ 破產或過勞 = 直接死亡！</p>
             <div class="player-input">
                 <input type="text" id="player-name" placeholder="請輸入姓名或座號" maxlength="20">
             </div>
@@ -73,25 +244,24 @@
             <button class="btn btn-invest" onclick="startGame('tech')">💻 工程師 (高風險)</button>
         </div>
 
-        <!-- 遊戲畫面 -->
         <div id="game-screen" class="screen hidden">
             <h3 id="job-title" style="margin:0"></h3>
             <div class="stats-grid">
-                <div class="stat"><span class="label">資產</span><span id="bal" class="val">$0</span></div>
-                <div class="stat"><span class="label">壓力</span><span id="stress" class="val">0%</span></div>
+                <div class="stat" id="bal-stat"><span class="label">資產</span><span id="bal" class="val">$0</span></div>
+                <div class="stat" id="stress-stat"><span class="label">壓力 ⚠️100=死</span><span id="stress" class="val">0%</span></div>
                 <div class="stat"><span class="label">月份</span><span id="mon" class="val">1/12</span></div>
                 <div class="stat"><span class="label">時薪</span><span id="wage" class="val">$0</span></div>
             </div>
-            <div class="actions">
+            <div class="expense-bar" id="expense-bar">📋 每月固定開銷：房租+伙食+交通 = $0 ｜目標：$0</div>
+            <div class="actions" id="action-btns">
                 <button id="work-btn" class="btn btn-work" onclick="play('work')"></button>
                 <button id="up-btn" class="btn btn-up" onclick="play('up')"></button>
-                <button class="btn btn-invest" onclick="play('invest')">📈 買入存股 (-$3萬)</button>
-                <button class="btn btn-fun" onclick="play('fun')">🍜 放鬆休息 (-$1000)</button>
+                <button class="btn btn-invest" onclick="play('invest')">📈 買入存股 (-$3萬，骰子決定漲跌)</button>
+                <button class="btn btn-fun" onclick="play('fun')">🍜 放鬆休息 (-$2000，骰子決定效果)</button>
             </div>
             <div id="log"></div>
         </div>
 
-        <!-- 結算畫面 -->
         <div id="end-screen" class="screen hidden"></div>
     </div>
 </div>
@@ -99,224 +269,453 @@
 <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbxBEoJfv-tEGHnw3Y9jB4TKQqR9T2SVrKf-i7K4wzQosiboYlFN9wekSA_oPsB6kEwP/exec';
 
+    // 職業設定：降低起始資金，增加壓力
     const jobs = {
-        delivery: { title: "外送員", bal: 20000, base: 45000, wage: 4000, upCost: 5000, upGain: 200, sWork: 20, sUp: 25, work: "送外送" },
-        office:   { title: "行政員", bal: 35000, base: 30000, wage: 1800, upCost: 8000, upGain: 2000, sWork: 8, sUp: 15, work: "假日兼差" },
-        tech:     { title: "工程師", bal: 15000, base: 42000, wage: 2500, upCost: 30000, upGain: 7500, sWork: 15, sUp: 10, work: "接案" }
+        delivery: { title: "外送員", bal: 8000, base: 38000, wage: 4500, upCost: 5000, upGain: 250, sWork: 22, sUp: 28, work: "送外送", expense: 18000 },
+        office:   { title: "行政員", bal: 15000, base: 28000, wage: 2000, upCost: 8000, upGain: 2200, sWork: 10, sUp: 18, work: "假日兼差", expense: 15000 },
+        tech:     { title: "工程師", bal: 5000, base: 40000, wage: 3000, upCost: 30000, upGain: 8000, sWork: 18, sUp: 12, work: "接案", expense: 22000 }
     };
 
     let p = {};
     let choices = [];
+    let actionLocked = false;
+    let isDead = false;
+
+    // ===== 骰子 =====
+    const faceRotations = { 1:'rotateY(0deg)', 2:'rotateY(180deg)', 3:'rotateY(90deg)', 4:'rotateY(-90deg)', 5:'rotateX(-90deg)', 6:'rotateX(90deg)' };
+
+    function buildDiceFaces(el) {
+        el.innerHTML = '';
+        for (let n = 1; n <= 6; n++) {
+            const face = document.createElement('div');
+            face.className = `dice-face face-${n} dots-${n}`;
+            for (let d = 0; d < n; d++) { const dot = document.createElement('div'); dot.className = 'dot'; face.appendChild(dot); }
+            el.appendChild(face);
+        }
+    }
+
+    function rollDice(count) {
+        return new Promise(resolve => {
+            const overlay = document.getElementById('dice-overlay');
+            const d1El = document.getElementById('dice1');
+            const d2El = document.getElementById('dice2');
+            buildDiceFaces(d1El);
+            if (count === 2) { buildDiceFaces(d2El); d2El.parentElement.style.display = ''; }
+            else { d2El.parentElement.style.display = 'none'; }
+            document.getElementById('dice-result-text').textContent = '';
+            document.getElementById('dice-effect-text').textContent = '';
+            overlay.classList.add('show');
+            d1El.classList.add('rolling');
+            if (count === 2) d2El.classList.add('rolling');
+            const r1 = Math.floor(Math.random() * 6) + 1;
+            const r2 = count === 2 ? Math.floor(Math.random() * 6) + 1 : 0;
+            setTimeout(() => {
+                d1El.classList.remove('rolling');
+                d1El.style.transform = faceRotations[r1];
+                if (count === 2) { d2El.classList.remove('rolling'); d2El.style.transform = faceRotations[r2]; }
+                const total = r1 + r2;
+                document.getElementById('dice-result-text').textContent = count === 2 ? `🎲 ${r1} + ${r2} = ${total}` : `🎲 ${r1}`;
+                setTimeout(() => {
+                    overlay.classList.remove('show');
+                    d1El.style.transform = '';
+                    resolve(count === 2 ? [r1, r2] : [r1]);
+                }, 1200);
+            }, 900);
+        });
+    }
+
+    function setDiceLabel(t) { document.getElementById('dice-action-label').textContent = t; }
+    function setDiceEffect(t) { document.getElementById('dice-effect-text').textContent = t; }
 
     function updateHelper(msg, emoji) {
         document.getElementById('helper-msg').innerText = msg;
         if (emoji) document.getElementById('avatar').innerText = emoji;
     }
-
     function addLog(msg) {
         const log = document.getElementById('log');
         log.innerHTML += '▸ ' + msg + '<br>';
         log.scrollTop = log.scrollHeight;
     }
-
-    function startGame(key) {
-        const name = document.getElementById('player-name').value.trim();
-        if (!name) {
-            updateHelper("請先輸入你的名字或座號！", "☝️");
-            document.getElementById('player-name').focus();
-            return;
-        }
-        p = { ...jobs[key], key: key, mon: 1, clk: 0, stress: 20, pass: 0, target: 180000 };
-        choices = [];
-        document.getElementById('start-screen').classList.add('hidden');
-        document.getElementById('game-screen').classList.remove('hidden');
-        document.getElementById('job-title').innerText = p.title;
-        document.getElementById('work-btn').innerText = `${p.work} (+$${p.wage})`;
-        document.getElementById('up-btn').innerText = `📚 進修 (-$${p.upCost})`;
-        updateHelper("加油！記得別讓壓力爆表喔！", "👨‍💼");
-        addLog(`選擇職業：${p.title}，起始資金 $${p.bal}`);
-        update();
+    function flashStat(id, good) {
+        const el = document.getElementById(id);
+        el.classList.remove('flash-good','flash-bad');
+        void el.offsetWidth;
+        el.classList.add(good ? 'flash-good' : 'flash-bad');
+    }
+    function disableActions(disabled) {
+        actionLocked = disabled;
+        document.querySelectorAll('#action-btns .btn').forEach(b => b.disabled = disabled);
     }
 
-    function play(type) {
-        if (p.mon > 12) return;
-        p.clk++;
-        choices.push(type);
+    // ===== 骰子對照表（更殘酷版）=====
 
-        if (type === 'work') {
-            p.bal += p.wage; p.stress += p.sWork;
-            addLog(`${p.work} +$${p.wage}`);
-            updateHelper("努力賺錢中...辛苦了！", "💪");
-        } else if (type === 'up') {
-            if (p.stress > 80) { updateHelper("你太累了，讀不下書！", "😫"); p.clk--; choices.pop(); return; }
-            if (p.bal >= p.upCost) {
-                p.bal -= p.upCost; p.wage += p.upGain; p.stress += p.sUp;
-                addLog(`進修 -$${p.upCost}，時薪↑$${p.upGain}`);
-                updateHelper("學習讓你更值錢！", "🧠");
-            } else {
-                addLog("錢不夠進修！");
-                updateHelper("存夠錢再來學習吧！", "🤔");
-                p.clk--; choices.pop(); return;
-            }
-        } else if (type === 'invest') {
-            if (p.bal >= 30000) {
-                p.bal -= 30000; p.pass++;
-                addLog(`買入存股 -$30000（每月被動收入 +$${p.pass * 2000}）`);
-                updateHelper("投資是讓錢幫你工作！", "📊");
-            } else {
-                addLog("資金不足，無法投資！");
-                updateHelper("至少要 $30,000 才能買存股喔！", "🤷");
-                p.clk--; choices.pop(); return;
-            }
-        } else if (type === 'fun') {
-            if (p.bal >= 1000) {
-                p.bal -= 1000; p.stress = Math.max(0, p.stress - 25);
-                addLog("放鬆休息 -$1000，壓力↓");
-                updateHelper("適度休息也很重要！", "😊");
-            } else {
-                addLog("連休息的錢都沒有...");
-                updateHelper("先賺點錢吧！", "😅");
-                p.clk--; choices.pop(); return;
-            }
+    // 工作：骰1 → 收入倍率 + 額外壓力/意外
+    const workMultipliers = {
+        1: { mult: 0,    stressMod: 1.5, msg: "⚠️ 出車禍！不但沒賺到錢還受傷！", emoji: "🚑" },
+        2: { mult: 0.5,  stressMod: 1.3, msg: "手氣差，只賺到一半", emoji: "😩" },
+        3: { mult: 0.8,  stressMod: 1.0, msg: "普普通通", emoji: "😐" },
+        4: { mult: 1.0,  stressMod: 1.0, msg: "正常發揮", emoji: "👍" },
+        5: { mult: 1.3,  stressMod: 0.8, msg: "效率不錯！", emoji: "😄" },
+        6: { mult: 2.0,  stressMod: 0.5, msg: "🔥 大爆發！雙倍收入！", emoji: "🔥" }
+    };
+
+    // 進修：骰1
+    const upResults = {
+        1: { mult: -0.5, msg: "💸 不但沒學到東西，還被騙學費！", emoji: "😱" },
+        2: { mult: 0,    msg: "學了但全忘了...白花錢", emoji: "😵" },
+        3: { mult: 0.5,  msg: "學到一半...", emoji: "🤔" },
+        4: { mult: 1.0,  msg: "順利學成！", emoji: "📖" },
+        5: { mult: 1.5,  msg: "融會貫通！", emoji: "💡" },
+        6: { mult: 2.0,  msg: "🔥 開竅了！大幅加薪！", emoji: "🎓" }
+    };
+
+    // 投資：骰2顆（更大波動）
+    const investResults = {
+        2:  { ret: -1.0,  msg: "💀 血本無歸！全部賠光！", emoji: "💀" },
+        3:  { ret: -0.7,  msg: "💥 暴跌！損失慘重！", emoji: "📉" },
+        4:  { ret: -0.4,  msg: "大跌...心在淌血", emoji: "😰" },
+        5:  { ret: -0.15, msg: "小跌，還撐得住", emoji: "😟" },
+        6:  { ret: 0,     msg: "持平，不賺不賠", emoji: "😐" },
+        7:  { ret: 0.1,   msg: "微漲", emoji: "🙂" },
+        8:  { ret: 0.25,  msg: "穩定上漲！", emoji: "📈" },
+        9:  { ret: 0.5,   msg: "大漲！", emoji: "🤑" },
+        10: { ret: 0.8,   msg: "飆漲！", emoji: "🚀" },
+        11: { ret: 1.2,   msg: "🔥 翻倍行情！", emoji: "💰" },
+        12: { ret: 2.0,   msg: "🎰 傳說級暴漲！三倍報酬！", emoji: "🏆" }
+    };
+
+    // 休息：骰1（花更多錢，效果不一定好）
+    const funResults = {
+        1: { stress: 5,   msg: "⚠️ 放鬆時出意外，反而更累！", emoji: "🤕" },
+        2: { stress: -8,  msg: "休息品質不太好...", emoji: "😴" },
+        3: { stress: -15, msg: "還可以", emoji: "😌" },
+        4: { stress: -22, msg: "不錯的休息！", emoji: "☕" },
+        5: { stress: -30, msg: "超級放鬆！", emoji: "🏖️" },
+        6: { stress: -45, msg: "🔥 完美假期！壓力大減！", emoji: "🌈" }
+    };
+
+    // 隨機事件（更殘酷，負面事件更多更重）
+    const randomEvents = {
+        2:  { msg: "💀 家人重病住院 -$25000", bal: -25000, stress: 25, emoji: "🏥", helper: "天塌了..." },
+        3:  { msg: "被詐騙集團騙光 -$18000", bal: -18000, stress: 20, emoji: "😱", helper: "報警也追不回來..." },
+        4:  { msg: "房東漲租+家電壞 -$12000", bal: -12000, stress: 15, emoji: "🏠", helper: "禍不單行..." },
+        5:  { msg: "手機壞+罰單 -$8000", bal: -8000, stress: 10, emoji: "📱", helper: "什麼都壞了..." },
+        6:  { msg: "臨時醫療支出 -$5000", bal: -5000, stress: 8, emoji: "💊", helper: "小病也要花大錢" },
+        7:  { msg: "平安無事", bal: 0, stress: 3, emoji: "☀️", helper: "日子還是有壓力的" },
+        8:  { msg: "撿到錢 +$2000", bal: 2000, stress: -2, emoji: "🍀", helper: "小確幸" },
+        9:  { msg: "加班獎金 +$5000", bal: 5000, stress: 8, emoji: "⏰", helper: "用命換來的..." },
+        10: { msg: "中了小獎 +$8000", bal: 8000, stress: -5, emoji: "🎰", helper: "運氣不錯！" },
+        11: { msg: "年終獎金 +$15000！", bal: 15000, stress: -8, emoji: "🎉", helper: "太棒了！" },
+        12: { msg: "🎊 中大獎 +$25000！", bal: 25000, stress: -15, emoji: "🏆", helper: "奇蹟！！！" }
+    };
+
+    // ===== 死亡判定 =====
+    function checkDeath() {
+        if (isDead) return true;
+        // 破產
+        if (p.bal < 0) {
+            triggerDeath('bankrupt');
+            return true;
         }
-
-        // 被動收入
-        if (p.pass > 0) {
-            const income = p.pass * 2000;
-            p.bal += income;
-        }
-
-        // 隨機事件（每 3 次行動觸發一次）
-        if (p.clk % 3 === 0) randomEvent();
-
-        // 每 3 次行動 = 1 個月
-        if (p.clk % 3 === 0) {
-            p.bal += p.base; // 月薪
-            p.mon++;
-            if (p.mon <= 12) {
-                addLog(`── 第 ${p.mon} 月開始，月薪 +$${p.base} ──`);
-            }
-        }
-
-        // 壓力爆表檢查
+        // 過勞
         if (p.stress >= 100) {
-            addLog("壓力爆表！強制休息一個月...");
-            updateHelper("身體是革命的本錢啊！", "🏥");
-            p.stress = 50;
-            p.mon++;
+            triggerDeath('burnout');
+            return true;
+        }
+        return false;
+    }
+
+    function triggerDeath(cause) {
+        isDead = true;
+        disableActions(true);
+
+        // 紅色閃光
+        const flash = document.getElementById('death-flash');
+        flash.classList.add('flash');
+        setTimeout(() => flash.classList.remove('flash'), 700);
+
+        let causeText = '';
+        let detailText = '';
+        if (cause === 'bankrupt') {
+            causeText = '💸 破產了！';
+            detailText = `你的資產跌到 $${p.bal.toLocaleString()}，已經資不抵債。在現實中，這意味著信用破產、被追債、生活陷入困境。理財最重要的原則：永遠不要讓自己破產！`;
+            updateHelper("破產了...一切都結束了...", "💀");
+        } else if (cause === 'burnout') {
+            causeText = '🏥 過勞倒下了！';
+            detailText = `壓力達到 ${p.stress}%，身體完全崩潰。在現實中，過勞可能導致嚴重的健康問題。記住：沒有健康，賺再多錢都沒有意義！`;
+            updateHelper("身體垮了...錢再多也沒用...", "💀");
         }
 
-        update();
-
-        if (p.mon > 12) endGame();
-    }
-
-    function randomEvent() {
-        const events = [
-            { msg: "意外醫療支出 -$5000", bal: -5000, stress: 10, emoji: "🏥", helper: "生病了要花錢看醫生..." },
-            { msg: "獲得年終獎金 +$8000！", bal: 8000, stress: -5, emoji: "🎉", helper: "太棒了，意外之財！" },
-            { msg: "房租漲價 -$3000", bal: -3000, stress: 5, emoji: "🏠", helper: "生活成本又增加了..." },
-            { msg: "朋友還錢 +$5000", bal: 5000, stress: -3, emoji: "🤝", helper: "朋友很講信用！" },
-            { msg: "手機壞了 -$8000", bal: -8000, stress: 15, emoji: "📱", helper: "唉，又要花錢修..." },
-            { msg: "中了小獎 +$2000！", bal: 2000, stress: -5, emoji: "🎰", helper: "小確幸！" },
-            { msg: "加班獎金 +$3000", bal: 3000, stress: 10, emoji: "⏰", helper: "辛苦但有回報！" },
-            { msg: "交通罰單 -$2000", bal: -2000, stress: 8, emoji: "🚗", helper: "下次要注意交通規則！" }
-        ];
-        const e = events[Math.floor(Math.random() * events.length)];
-        p.bal += e.bal;
-        p.stress = Math.max(0, Math.min(100, p.stress + e.stress));
-        addLog(`⚡ 隨機事件：${e.msg}`);
-        updateHelper(e.helper, e.emoji);
-        choices.push('event:' + e.msg);
-    }
-
-    function update() {
-        document.getElementById('bal').innerText = '$' + p.bal.toLocaleString();
-        document.getElementById('stress').innerText = p.stress + '%';
-        document.getElementById('stress').style.color = p.stress > 70 ? '#e74c3c' : p.stress > 40 ? '#f39c12' : '#27ae60';
-        document.getElementById('mon').innerText = Math.min(p.mon, 12) + '/12';
-        document.getElementById('wage').innerText = '$' + p.wage.toLocaleString();
-        document.getElementById('work-btn').innerText = `${p.work} (+$${p.wage})`;
-    }
-
-    function endGame() {
-        const won = p.bal >= p.target;
-        const stars = p.bal >= 250000 ? 3 : p.bal >= p.target ? 2 : p.bal >= 100000 ? 1 : 0;
-        const starStr = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
-
-        // 統計選擇
         const workCount = choices.filter(c => c === 'work').length;
         const upCount = choices.filter(c => c === 'up').length;
         const investCount = choices.filter(c => c === 'invest').length;
         const funCount = choices.filter(c => c === 'fun').length;
 
-        let tips = '';
-        if (won) {
-            tips = '🎉 恭喜達成目標！你學會了理財的基本功！';
-            updateHelper("太厲害了！你是理財小達人！", "🏆");
-        } else {
-            tips = '💡 雖然沒達標，但每次經驗都是學習！';
-            updateHelper("沒關係，下次一定可以！", "💪");
+        document.getElementById('go-cause').textContent = causeText;
+        document.getElementById('go-detail').textContent = detailText;
+        document.getElementById('go-stats').innerHTML =
+            `<b>職業：</b>${p.title}<br>` +
+            `<b>存活：</b>${Math.min(p.mon, 12)} / 12 個月<br>` +
+            `<b>最終資產：</b>$${p.bal.toLocaleString()}<br>` +
+            `<b>最終壓力：</b>${p.stress}%<br>` +
+            `<hr style="border:none;border-top:1px solid rgba(255,255,255,0.2);margin:6px 0">` +
+            `工作 ${workCount} ｜ 進修 ${upCount} ｜ 投資 ${investCount} ｜ 休息 ${funCount}`;
+
+        setTimeout(() => {
+            document.getElementById('gameover-overlay').classList.add('show');
+        }, 300);
+
+        sendToSheet({
+            job: p.title, stars: 0, result: cause === 'bankrupt' ? '破產死亡' : '過勞死亡',
+            bal: p.bal, stress: p.stress, stocks: p.pass,
+            workCount, upCount, investCount, funCount
+        });
+    }
+
+    // ===== 遊戲流程 =====
+    function startGame(key) {
+        const name = document.getElementById('player-name').value.trim();
+        if (!name) { updateHelper("請先輸入你的名字或座號！", "☝️"); document.getElementById('player-name').focus(); return; }
+        const j = jobs[key];
+        p = { ...j, key: key, mon: 1, clk: 0, stress: 25, pass: 0, investTotal: 0, target: 200000 };
+        choices = [];
+        isDead = false;
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        document.getElementById('job-title').innerText = '🎲 ' + p.title;
+        document.getElementById('work-btn').innerText = `${p.work} (+$${p.wage} × 骰子)`;
+        document.getElementById('up-btn').innerText = `📚 進修 (-$${p.upCost})`;
+        document.getElementById('expense-bar').textContent = `📋 每月固定開銷：$${p.expense.toLocaleString()} ｜ 🎯 目標：$${p.target.toLocaleString()}`;
+        updateHelper("小心！破產或壓力100%就直接死亡！", "⚠️");
+        addLog(`選擇職業：${p.title}，起始資金 $${p.bal}，月開銷 $${p.expense.toLocaleString()}`);
+        addLog(`⚠️ 破產 = 死亡！壓力100% = 死亡！`);
+        update();
+    }
+
+    async function play(type) {
+        if (p.mon > 12 || actionLocked || isDead) return;
+        disableActions(true);
+
+        p.clk++;
+        choices.push(type);
+
+        if (type === 'work') {
+            setDiceLabel(`🎲 ${p.work}中...擲骰決定收入！`);
+            const [d] = await rollDice(1);
+            const r = workMultipliers[d];
+            const earned = Math.round(p.wage * r.mult);
+            p.bal += earned;
+            const stressAdd = Math.round(p.sWork * r.stressMod);
+            p.stress += stressAdd;
+            // 骰1出車禍額外扣錢
+            if (d === 1) {
+                const medical = 5000;
+                p.bal -= medical;
+                addLog(`${p.work} 🎲${d} → 車禍！+$0 還要付醫藥費 -$${medical.toLocaleString()}`);
+            } else {
+                addLog(`${p.work} 🎲${d} → +$${earned.toLocaleString()} ${r.msg}`);
+            }
+            setDiceEffect(r.msg);
+            updateHelper(r.msg, r.emoji);
+            flashStat('bal-stat', d > 1);
+
+        } else if (type === 'up') {
+            if (p.stress > 80) { updateHelper("你太累了，讀不下書！", "😫"); p.clk--; choices.pop(); disableActions(false); return; }
+            if (p.bal < p.upCost) { addLog("錢不夠進修！"); updateHelper("存夠錢再來！", "🤔"); p.clk--; choices.pop(); disableActions(false); return; }
+            p.bal -= p.upCost;
+            setDiceLabel(`🎲 進修中...擲骰決定學習成果！`);
+            const [d] = await rollDice(1);
+            const r = upResults[d];
+            const gain = Math.round(p.upGain * r.mult);
+            p.wage += gain;
+            p.stress += Math.round(p.sUp * (d <= 2 ? 1.3 : 0.8));
+            setDiceEffect(r.msg);
+            // 骰1被騙，額外損失
+            if (d === 1) {
+                const scamLoss = Math.round(p.upCost * 0.5);
+                p.bal -= scamLoss;
+                addLog(`進修 🎲${d} → 被假課程騙了！額外損失 -$${scamLoss.toLocaleString()}`);
+                flashStat('bal-stat', false);
+            } else if (gain > 0) {
+                addLog(`進修 🎲${d} → 時薪↑$${gain} ${r.msg}`);
+            } else {
+                addLog(`進修 🎲${d} → 白花錢... ${r.msg}`);
+            }
+            updateHelper(r.msg, r.emoji);
+
+        } else if (type === 'invest') {
+            if (p.bal < 30000) { addLog("資金不足！"); updateHelper("至少 $30,000！", "🤷"); p.clk--; choices.pop(); disableActions(false); return; }
+            p.bal -= 30000;
+            p.pass++;
+            setDiceLabel(`🎲 投資市場！擲兩顆骰子！`);
+            const [d1, d2] = await rollDice(2);
+            const total = d1 + d2;
+            const r = investResults[total];
+            const profit = Math.round(30000 * r.ret);
+            const returnAmt = 30000 + profit;
+            p.bal += Math.max(0, returnAmt); // 最多賠光本金
+            if (returnAmt <= 0) {
+                addLog(`投資 🎲${d1}+${d2}=${total} → ${r.msg} 本金全部蒸發！`);
+                p.pass--; // 股票沒了
+            } else if (profit < 0) {
+                addLog(`投資 🎲${d1}+${d2}=${total} → ${r.msg} ${profit.toLocaleString()}`);
+            } else {
+                addLog(`投資 🎲${d1}+${d2}=${total} → ${r.msg} +$${profit.toLocaleString()}`);
+            }
+            setDiceEffect(r.msg);
+            updateHelper(r.msg, r.emoji);
+            flashStat('bal-stat', profit >= 0);
+
+            // 投資也帶壓力
+            if (profit < 0) p.stress += Math.min(15, Math.round(Math.abs(profit) / 2000));
+
+        } else if (type === 'fun') {
+            if (p.bal < 2000) { addLog("連休息的錢都沒有..."); updateHelper("先賺點錢吧！", "😅"); p.clk--; choices.pop(); disableActions(false); return; }
+            p.bal -= 2000;
+            setDiceLabel(`🎲 放鬆中...擲骰看品質！`);
+            const [d] = await rollDice(1);
+            const r = funResults[d];
+            p.stress = Math.max(0, p.stress + r.stress);
+            setDiceEffect(r.msg);
+            addLog(`休息 🎲${d} → 壓力${r.stress > 0 ? '+' : ''}${r.stress} ${r.msg}`);
+            updateHelper(r.msg, r.emoji);
+            if (d === 1) { flashStat('stress-stat', false); } else { flashStat('stress-stat', true); }
         }
 
-        const summary = `${p.title}｜資產$${p.bal.toLocaleString()}｜${won ? '達標' : '未達標'}`;
+        // 死亡檢查（行動後立即檢查）
+        p.stress = Math.min(100, Math.max(0, p.stress));
+        if (checkDeath()) { update(); return; }
 
-        document.getElementById('game-screen').classList.add('hidden');
-        document.getElementById('end-screen').classList.remove('hidden');
-        document.getElementById('end-screen').innerHTML = `
-            <h2>${won ? '🎉 挑戰成功！' : '😅 挑戰結束'}</h2>
-            <div class="star">${starStr}</div>
-            <div class="end-stats">
-                <b>職業：</b>${p.title}<br>
-                <b>最終資產：</b>$${p.bal.toLocaleString()} / 目標 $${p.target.toLocaleString()}<br>
-                <b>存股張數：</b>${p.pass} 張（每月被動收入 $${p.pass * 2000}）<br>
-                <b>最終壓力：</b>${p.stress}%<br>
-                <hr style="border:none;border-top:1px solid #ddd;margin:8px 0">
-                <b>行動統計：</b><br>
-                工作 ${workCount} 次 ｜ 進修 ${upCount} 次 ｜ 投資 ${investCount} 次 ｜ 休息 ${funCount} 次
-            </div>
-            <p>${tips}</p>
-            <div class="send-status"></div>
-            <button class="btn btn-work" onclick="restart()" style="margin-top:10px">🔄 再玩一次</button>
-        `;
+        // 月結（每3次行動）
+        if (p.clk % 3 === 0) {
+            // 月薪
+            p.bal += p.base;
+            addLog(`💰 月薪 +$${p.base.toLocaleString()}`);
 
-        // 送出資料到 Google Sheet
-        sendToSheet({
-            job: p.title,
-            stars: stars,
-            result: won ? '達標' : '未達標',
-            bal: p.bal,
-            stress: p.stress,
-            stocks: p.pass,
-            workCount: workCount,
-            upCount: upCount,
-            investCount: investCount,
-            funCount: funCount
-        });
+            // 扣除固定開銷
+            p.bal -= p.expense;
+            addLog(`💸 月固定開銷 -$${p.expense.toLocaleString()}（房租+伙食+交通）`);
+            flashStat('bal-stat', false);
+
+            // 被動收入
+            if (p.pass > 0) {
+                const passIncome = p.pass * 2000;
+                p.bal += passIncome;
+                addLog(`📊 存股被動收入 +$${passIncome.toLocaleString()}`);
+            }
+
+            // 壓力自然增加（生活壓力）
+            p.stress += 3;
+
+            // 死亡檢查（月結扣款後）
+            p.stress = Math.min(100, Math.max(0, p.stress));
+            if (checkDeath()) { update(); return; }
+
+            p.mon++;
+            if (p.mon <= 12) {
+                addLog(`── 第 ${p.mon} 月開始 ──`);
+                await triggerRandomEvent();
+                // 隨機事件後也可能死
+                p.stress = Math.min(100, Math.max(0, p.stress));
+                if (checkDeath()) { update(); return; }
+            }
+        }
+
+        update();
+        disableActions(false);
+
+        if (p.mon > 12) endGame();
+    }
+
+    async function triggerRandomEvent() {
+        setDiceLabel(`⚡ 隨機事件！擲兩顆骰子！`);
+        const [d1, d2] = await rollDice(2);
+        const total = d1 + d2;
+        const e = randomEvents[total];
+        p.bal += e.bal;
+        p.stress = Math.max(0, Math.min(100, p.stress + e.stress));
+        setDiceEffect(e.msg);
+        addLog(`⚡ 事件 🎲${d1}+${d2}=${total}：${e.msg}`);
+        updateHelper(e.helper, e.emoji);
+        choices.push('event:' + e.msg);
+        if (e.bal > 0) flashStat('bal-stat', true);
+        else if (e.bal < 0) flashStat('bal-stat', false);
+    }
+
+    function update() {
+        document.getElementById('bal').innerText = '$' + p.bal.toLocaleString();
+        const balEl = document.getElementById('bal');
+        balEl.style.color = p.bal < 10000 ? '#e74c3c' : p.bal < 30000 ? '#f39c12' : '#2c3e50';
+
+        document.getElementById('stress').innerText = p.stress + '%';
+        document.getElementById('stress').style.color = p.stress > 70 ? '#e74c3c' : p.stress > 40 ? '#f39c12' : '#27ae60';
+
+        // 壓力高時閃爍警告
+        const stressStat = document.getElementById('stress-stat');
+        if (p.stress >= 75) { stressStat.classList.add('stress-danger'); }
+        else { stressStat.classList.remove('stress-danger'); }
+
+        document.getElementById('mon').innerText = Math.min(p.mon, 12) + '/12';
+        document.getElementById('wage').innerText = '$' + p.wage.toLocaleString();
+        document.getElementById('work-btn').innerText = `${p.work} (+$${p.wage} × 骰子)`;
+    }
+
+    function endGame() {
+        const won = p.bal >= p.target;
+        const workCount = choices.filter(c => c === 'work').length;
+        const upCount = choices.filter(c => c === 'up').length;
+        const investCount = choices.filter(c => c === 'invest').length;
+        const funCount = choices.filter(c => c === 'fun').length;
+
+        const statsHtml =
+            `<b>職業：</b>${p.title}<br>` +
+            `<b>最終資產：</b>$${p.bal.toLocaleString()} / 目標 $${p.target.toLocaleString()}<br>` +
+            `<b>存股：</b>${p.pass} 張<br>` +
+            `<b>最終壓力：</b>${p.stress}%<br>` +
+            `<hr style="border:none;border-top:1px solid rgba(255,255,255,0.15);margin:6px 0">` +
+            `工作 ${workCount} ｜ 進修 ${upCount} ｜ 投資 ${investCount} ｜ 休息 ${funCount}`;
+
+        if (won) {
+            const stars = p.bal >= 300000 ? 3 : p.bal >= 250000 ? 2 : 1;
+            document.getElementById('win-stars').textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+            document.getElementById('win-detail').textContent = `最終資產 $${p.bal.toLocaleString()}！你在殘酷的現實中存活下來，還達成了理財目標。真正的理財高手！`;
+            document.getElementById('win-stats').innerHTML = statsHtml;
+            document.getElementById('win-overlay').classList.add('show');
+            updateHelper("不可思議！你是理財之神！", "🏆");
+
+            sendToSheet({ job: p.title, stars, result: '達標', bal: p.bal, stress: p.stress, stocks: p.pass, workCount, upCount, investCount, funCount });
+        } else {
+            document.getElementById('fail-detail').textContent = `最終資產 $${p.bal.toLocaleString()}，未達到 $${p.target.toLocaleString()} 的目標。雖然活了下來，但生活依然拮据。下次試著更好地平衡工作、投資和休息吧！`;
+            document.getElementById('fail-stats').innerHTML = statsHtml;
+            document.getElementById('fail-overlay').classList.add('show');
+            updateHelper("活著就好...但目標沒達成", "😔");
+
+            sendToSheet({ job: p.title, stars: 0, result: '未達標', bal: p.bal, stress: p.stress, stocks: p.pass, workCount, upCount, investCount, funCount });
+        }
     }
 
     function sendToSheet(data) {
         if (!API_URL) return;
         data.player = document.getElementById('player-name').value.trim() || '匿名';
-        fetch(API_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify(data)
-        }).then(() => {
-            const el = document.querySelector('.send-status');
-            if (el) { el.textContent = '✅ 已傳送到 Google Sheet'; el.className = 'send-status ok'; }
+        fetch(API_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(data) })
+        .then(() => {
+            document.querySelectorAll('.send-status-go,.send-status-win,.send-status-fail').forEach(el => { el.textContent = '✅ 已傳送'; });
         }).catch(() => {
-            const el = document.querySelector('.send-status');
-            if (el) { el.textContent = '⚠️ 傳送失敗'; el.className = 'send-status fail'; }
+            document.querySelectorAll('.send-status-go,.send-status-win,.send-status-fail').forEach(el => { el.textContent = '⚠️ 傳送失敗'; });
         });
     }
 
     function restart() {
+        // 關閉所有結算畫面
+        document.getElementById('gameover-overlay').classList.remove('show');
+        document.getElementById('win-overlay').classList.remove('show');
+        document.getElementById('fail-overlay').classList.remove('show');
+        document.getElementById('game-screen').classList.add('hidden');
         document.getElementById('end-screen').classList.add('hidden');
         document.getElementById('start-screen').classList.remove('hidden');
         document.getElementById('log').innerHTML = '';
-        updateHelper("再來一局吧！換個職業試試？", "👨‍🏫");
+        isDead = false;
+        updateHelper("再來一局？這次能活下來嗎...", "👨‍🏫");
     }
 </script>
 </body>
