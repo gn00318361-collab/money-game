@@ -294,6 +294,43 @@
         } catch (e) { console.warn('Leaderboard listen error:', e.message); }
     }
 
+    // 監聽老師的遊戲控制（停止/繼續/踢出）
+    let lastControlId = 0;
+    function listenGameControl() {
+        if (!fbDb) return;
+        try {
+            fbDb.ref('game_control').on('value', (snapshot) => {
+                const ctrl = snapshot.val();
+                if (!ctrl || ctrl.id === lastControlId) return;
+                lastControlId = ctrl.id;
+
+                if (ctrl.action === 'stop') {
+                    paused = true;
+                    document.getElementById('event-modal').style.display = 'flex';
+                    document.getElementById('modal-content').className = "p-8 rounded-lg text-center max-w-md bg-orange-900";
+                    document.getElementById('event-title').textContent = '⏸️ 老師暫停了遊戲';
+                    document.getElementById('event-desc').textContent = '請等待老師指示...';
+                    log('[系統] 老師暫停了遊戲');
+                } else if (ctrl.action === 'resume') {
+                    paused = false;
+                    document.getElementById('event-modal').style.display = 'none';
+                    log('[系統] 老師恢復了遊戲');
+                } else if (ctrl.action === 'kick') {
+                    // 全部清洗 → 踢回開始畫面
+                    clearInterval(timerInterval);
+                    paused = true;
+                    document.getElementById('event-modal').style.display = 'none';
+                    ['gameover-screen', 'win-screen'].forEach(id => { document.getElementById(id).style.display = 'none'; });
+                    document.getElementById('game-screen').classList.add('hidden');
+                    document.getElementById('start-screen').classList.remove('hidden');
+                    try { if (fbDb) { fbDb.ref('global_event').off(); fbDb.ref('players').off(); fbDb.ref('game_control').off(); } } catch(e) {}
+                    playerName = '';
+                    alert('老師已重置遊戲，請重新輸入姓名開始！');
+                }
+            });
+        } catch (e) { console.warn('Game control listen error:', e.message); }
+    }
+
     const blackSwans = [
         { name: "矽谷大地震", target: "tech", impact: 0.35, msg: "伺服器中心全毀！科技股暴跌 65%！", icon: "🌋" },
         { name: "AI 泡沫破裂", target: "tech", impact: 0.5, msg: "AI 概念股崩盤！科技股暴跌 50%！", icon: "🤖" },
@@ -311,6 +348,8 @@
 
     function startGame() {
         playerName = document.getElementById('player-name-input').value.trim();
+        // 清除 Firebase 路徑不允許的字元：. # $ [ ] /
+        playerName = playerName.replace(/[.#$\[\]\/]/g, '');
         if (!playerName) { alert('請輸入姓名或座號！'); return; }
 
         gs = {
@@ -332,6 +371,7 @@
         syncToFirebase();
         listenTeacherEvents();
         listenLeaderboard();
+        listenGameControl();
 
         if (timerInterval) clearInterval(timerInterval);
         timerInterval = setInterval(tick, 1000);
@@ -491,6 +531,7 @@
             if (fbDb) {
                 fbDb.ref('global_event').off();
                 fbDb.ref('players').off();
+                fbDb.ref('game_control').off();
                 if (playerName) fbDb.ref('players/' + playerName).remove();
             }
         } catch (e) { console.warn('Firebase cleanup error:', e.message); }

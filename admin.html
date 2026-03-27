@@ -60,17 +60,35 @@
             <div class="grid grid-cols-2 md:grid-cols-3 gap-3" id="manual-buttons"></div>
         </div>
 
-        <!-- 管理 -->
-        <div class="bg-slate-800 rounded-2xl p-6">
-            <h2 class="text-lg font-bold text-gray-400 mb-4">⚙️ 管理</h2>
-            <div class="flex gap-4">
-                <button onclick="resetGame()" class="bg-gray-600 hover:bg-gray-700 px-6 py-3 rounded-xl font-bold transition">
-                    🔄 重置所有玩家數據
+        <!-- 全部停止 -->
+        <div class="bg-slate-800 border-2 border-orange-600 rounded-2xl p-6 mb-6">
+            <h2 class="text-xl font-bold text-orange-400 mb-4">🛑 遊戲控制</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button onclick="stopAllGames()" class="bg-orange-600 hover:bg-orange-700 p-4 rounded-xl font-bold text-lg transition-all transform active:scale-95">
+                    ⏹️ 全部停止遊戲
                 </button>
-                <button onclick="resetRound()" class="bg-gray-600 hover:bg-gray-700 px-6 py-3 rounded-xl font-bold transition">
-                    🔁 重置輪數（重新開始）
+                <button onclick="resumeAllGames()" class="bg-green-600 hover:bg-green-700 p-4 rounded-xl font-bold text-lg transition-all transform active:scale-95">
+                    ▶️ 繼續遊戲
                 </button>
             </div>
+            <p class="text-xs text-gray-500 mt-2">按下停止後，所有學生的遊戲畫面會暫停並顯示提示。</p>
+        </div>
+
+        <!-- 清洗介面 -->
+        <div class="bg-slate-800 border-2 border-gray-600 rounded-2xl p-6">
+            <h2 class="text-lg font-bold text-gray-400 mb-4">🧹 清洗 / 重置</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button onclick="resetRound()" class="bg-gray-600 hover:bg-gray-700 p-3 rounded-xl font-bold transition">
+                    🔁 重置輪數
+                </button>
+                <button onclick="resetGame()" class="bg-gray-600 hover:bg-gray-700 p-3 rounded-xl font-bold transition">
+                    🔄 清除玩家數據
+                </button>
+                <button onclick="fullReset()" class="bg-red-800 hover:bg-red-700 p-3 rounded-xl font-bold transition border border-red-600">
+                    💣 全部清洗（換班用）
+                </button>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">「全部清洗」會清除所有玩家資料、事件紀錄、停止自動發送，適合下一個班級開始前使用。</p>
         </div>
 
         <p id="status" class="mt-6 text-center text-green-400 font-mono text-sm"></p>
@@ -204,11 +222,37 @@
             showStatus('輪數已重置，可重新開始');
         }
 
+        function stopAllGames() {
+            db.ref('game_control').set({ action: 'stop', id: Date.now() });
+            logEvent('⏹️ 已發送全部停止指令');
+            showStatus('已停止所有學生遊戲！');
+        }
+
+        function resumeAllGames() {
+            db.ref('game_control').set({ action: 'resume', id: Date.now() });
+            logEvent('▶️ 已發送繼續遊戲指令');
+            showStatus('已恢復所有學生遊戲！');
+        }
+
         function resetGame() {
             if (confirm("確定要刪除所有學生數據嗎？")) {
                 db.ref('players').remove();
                 logEvent('🔄 所有玩家數據已清空');
                 showStatus('數據已清空！');
+            }
+        }
+
+        function fullReset() {
+            if (confirm("⚠️ 全部清洗：會清除所有玩家資料、事件、控制訊號。確定嗎？")) {
+                stopAuto();
+                db.ref('players').remove();
+                db.ref('global_event').remove();
+                db.ref('game_control').set({ action: 'kick', id: Date.now() });
+                currentRound = 0;
+                document.getElementById('round-display').textContent = `0 / ${MAX_ROUNDS}`;
+                document.getElementById('event-log').innerHTML = '<div>> 已全部清洗，準備下一班！</div>';
+                logEvent('💣 全部清洗完成');
+                showStatus('全部清洗完成！可以開始下一班了');
             }
         }
 
