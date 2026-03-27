@@ -239,9 +239,9 @@
             <div class="player-input">
                 <input type="text" id="player-name" placeholder="請輸入姓名或座號" maxlength="20">
             </div>
-            <button class="btn btn-work" onclick="startGame('delivery')">🛵 外送員 (快節奏)</button>
-            <button class="btn btn-up" onclick="startGame('office')">💼 行政員 (穩健型)</button>
-            <button class="btn btn-invest" onclick="startGame('tech')">💻 工程師 (高風險)</button>
+            <button class="btn btn-work" onclick="startGame('youtuber')">🎬 影音創作者 (快節奏)</button>
+            <button class="btn btn-up" onclick="startGame('petshop')">🐾 寵物店長 (穩健型)</button>
+            <button class="btn btn-invest" onclick="startGame('gamedev')">🎮 遊戲開發者 (高風險)</button>
         </div>
 
         <div id="game-screen" class="screen hidden">
@@ -271,9 +271,9 @@
 
     // 職業設定：降低起始資金，增加壓力
     const jobs = {
-        delivery: { title: "外送員", bal: 8000, base: 38000, wage: 4500, upCost: 5000, upGain: 250, sWork: 22, sUp: 28, work: "送外送", expense: 18000 },
-        office:   { title: "行政員", bal: 15000, base: 28000, wage: 2000, upCost: 8000, upGain: 2200, sWork: 10, sUp: 18, work: "假日兼差", expense: 15000 },
-        tech:     { title: "工程師", bal: 5000, base: 40000, wage: 3000, upCost: 30000, upGain: 8000, sWork: 18, sUp: 12, work: "接案", expense: 22000 }
+        youtuber: { title: "影音創作者", bal: 8000, base: 38000, wage: 4500, upCost: 5000, upGain: 250, sWork: 22, sUp: 28, work: "拍片剪輯", expense: 18000 },
+        petshop:  { title: "寵物店長", bal: 15000, base: 28000, wage: 2000, upCost: 8000, upGain: 2200, sWork: 10, sUp: 18, work: "照顧毛孩", expense: 15000 },
+        gamedev:  { title: "遊戲開發者", bal: 5000, base: 40000, wage: 3000, upCost: 30000, upGain: 8000, sWork: 18, sUp: 12, work: "開發遊戲", expense: 22000 }
     };
 
     let p = {};
