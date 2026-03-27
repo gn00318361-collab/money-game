@@ -21,7 +21,13 @@
         <!-- 自動模式面板 -->
         <div class="bg-slate-800 border-2 border-yellow-600 rounded-2xl p-6 mb-6">
             <h2 class="text-xl font-bold text-yellow-500 mb-4">⚡ 自動發送模式</h2>
-            <p class="text-sm text-gray-400 mb-4">開啟後每 10 秒自動隨機發送一個黑天鵝事件，共 10 輪。全班收到一樣的事件。</p>
+            <p class="text-sm text-gray-400 mb-4">開啟後按照設定的間隔自動隨機發送黑天鵝事件，共 10 輪。全班收到一樣的事件。</p>
+
+            <div class="flex items-center gap-3 mb-4">
+                <label class="text-sm text-gray-400 whitespace-nowrap">每輪間隔：</label>
+                <input type="range" id="auto-interval" min="10" max="60" value="20" class="flex-1">
+                <span id="auto-interval-label" class="text-yellow-400 font-bold w-12 text-center">20s</span>
+            </div>
 
             <div class="flex items-center gap-4 mb-4">
                 <button id="auto-btn" onclick="toggleAuto()" class="bg-yellow-600 hover:bg-yellow-700 px-8 py-3 rounded-xl font-bold text-xl transition-all transform active:scale-95">
@@ -43,6 +49,39 @@
                     <span class="text-gray-400">在線人數：</span>
                     <span id="online-count" class="text-xl font-bold text-green-400">0</span>
                 </div>
+            </div>
+        </div>
+
+        <!-- 新聞跑馬燈 -->
+        <div class="bg-slate-800 border-2 border-cyan-600 rounded-2xl p-6 mb-6">
+            <h2 class="text-xl font-bold text-cyan-400 mb-2">📰 新聞跑馬燈</h2>
+            <p class="text-sm text-gray-400 mb-4">輸入新聞標題，學生端會先顯示新聞快報，幾秒後再觸發對應事件。讓學生先思考「這條新聞會影響什麼？」</p>
+
+            <div class="mb-4">
+                <input type="text" id="news-input" placeholder="例如：青溪國小宣佈全面改用綠能" maxlength="60"
+                    class="w-full bg-slate-700 border-2 border-slate-600 rounded-lg px-4 py-3 text-lg focus:border-cyan-400 focus:outline-none mb-3">
+
+                <div class="flex items-center gap-3 mb-3">
+                    <label class="text-sm text-gray-400">對應事件：</label>
+                    <select id="news-event-select" class="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm focus:border-cyan-400 focus:outline-none flex-1">
+                    </select>
+                </div>
+
+                <div class="flex items-center gap-3 mb-3">
+                    <label class="text-sm text-gray-400">新聞顯示秒數：</label>
+                    <input type="range" id="news-delay" min="5" max="30" value="15" class="flex-1">
+                    <span id="news-delay-label" class="text-cyan-400 font-bold w-8 text-center">15s</span>
+                </div>
+
+                <button onclick="sendNews()" class="w-full bg-cyan-600 hover:bg-cyan-700 p-4 rounded-xl font-bold text-xl transition-all transform active:scale-95">
+                    📡 發送新聞快報
+                </button>
+            </div>
+
+            <!-- 快速新聞模板 -->
+            <div class="mt-3">
+                <p class="text-xs text-gray-500 mb-2">快速模板（點選自動填入）：</p>
+                <div class="flex flex-wrap gap-2" id="news-templates"></div>
             </div>
         </div>
 
@@ -125,9 +164,16 @@
         let autoInterval = null;
         let autoRunning = false;
         let currentRound = 0;
-        let countdown = 10;
+        let autoSeconds = 20; // 預設每輪間隔
+        let countdown = 20;
         let countdownInterval = null;
         const MAX_ROUNDS = 10;
+
+        // 自動間隔滑桿
+        document.getElementById('auto-interval').addEventListener('input', (e) => {
+            autoSeconds = parseInt(e.target.value);
+            document.getElementById('auto-interval-label').textContent = autoSeconds + 's';
+        });
 
         // 產生手動按鈕
         const btnContainer = document.getElementById('manual-buttons');
@@ -165,12 +211,12 @@
         function startAuto() {
             autoRunning = true;
             currentRound = 0;
-            countdown = 10;
+            countdown = autoSeconds;
             document.getElementById('auto-btn').innerHTML = '⏸️ 停止自動發送';
             document.getElementById('auto-btn').className = 'bg-red-600 hover:bg-red-700 px-8 py-3 rounded-xl font-bold text-xl transition-all transform active:scale-95';
-            document.getElementById('auto-status').innerHTML = '<span class="text-yellow-400 pulse">🔴 自動發送中...</span>';
+            document.getElementById('auto-status').innerHTML = `<span class="text-yellow-400 pulse">🔴 自動發送中（每 ${autoSeconds} 秒）</span>`;
             document.getElementById('round-display').textContent = `0 / ${MAX_ROUNDS}`;
-            logEvent('⚡ 自動發送模式啟動！');
+            logEvent(`⚡ 自動發送模式啟動！每 ${autoSeconds} 秒一輪`);
 
             // 立刻發第一個
             fireNextEvent();
@@ -200,7 +246,7 @@
             const ev = blackSwans[Math.floor(Math.random() * blackSwans.length)];
             sendEvent(ev);
             document.getElementById('round-display').textContent = `${currentRound} / ${MAX_ROUNDS}`;
-            countdown = 10;
+            countdown = autoSeconds;
             document.getElementById('countdown').textContent = `${countdown}s`;
         }
 
@@ -267,6 +313,74 @@
             const el = document.getElementById('status');
             el.textContent = msg;
             setTimeout(() => { el.textContent = ''; }, 3000);
+        }
+
+        // ===== 新聞跑馬燈 =====
+        const newsTemplates = [
+            { news: "台灣宣佈全面禁止進口晶片", eventIdx: 2 },
+            { news: "中東爆發大規模軍事衝突", eventIdx: 5 },
+            { news: "全球最大交易所遭駭客入侵", eventIdx: 11 },
+            { news: "世界衛生組織宣佈新型病毒大流行", eventIdx: 9 },
+            { news: "各國央行聯手大幅升息", eventIdx: 7 },
+            { news: "政府宣佈史上最大經濟紓困方案", eventIdx: 10 },
+            { news: "AI 龍頭公司財報造假被揭發", eventIdx: 1 },
+            { news: "石油輸出國宣佈全面禁運", eventIdx: 3 },
+            { news: "學校宣佈全面改用綠色能源", eventIdx: 4 },
+            { news: "美元信心崩潰，各國拋售美債", eventIdx: 8 },
+        ];
+
+        // 填入事件下拉選單
+        const newsSelect = document.getElementById('news-event-select');
+        blackSwans.forEach((ev, i) => {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = `${ev.icon} ${ev.name}（${ev.msg}）`;
+            newsSelect.appendChild(opt);
+        });
+
+        // 填入快速模板按鈕
+        const templatesContainer = document.getElementById('news-templates');
+        newsTemplates.forEach(t => {
+            const btn = document.createElement('button');
+            btn.className = 'bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-full text-xs text-cyan-300 transition';
+            btn.textContent = t.news;
+            btn.onclick = () => {
+                document.getElementById('news-input').value = t.news;
+                document.getElementById('news-event-select').value = t.eventIdx;
+            };
+            templatesContainer.appendChild(btn);
+        });
+
+        // 延遲滑桿
+        document.getElementById('news-delay').addEventListener('input', (e) => {
+            document.getElementById('news-delay-label').textContent = e.target.value + 's';
+        });
+
+        function sendNews() {
+            const newsText = document.getElementById('news-input').value.trim();
+            if (!newsText) { alert('請輸入新聞內容！'); return; }
+
+            const eventIdx = parseInt(document.getElementById('news-event-select').value);
+            const ev = blackSwans[eventIdx];
+            const delay = parseInt(document.getElementById('news-delay').value);
+
+            // 先發送新聞快報到 Firebase
+            db.ref('news_flash').set({
+                id: Date.now(),
+                text: newsText,
+                delay: delay,
+                event: {
+                    target: ev.target,
+                    impact: ev.impact,
+                    msg: ev.msg,
+                    name: ev.name,
+                    icon: ev.icon
+                }
+            });
+
+            logEvent(`📰 新聞快報：「${newsText}」→ ${delay}s 後觸發 ${ev.icon} ${ev.name}`);
+            showStatus(`📰 已發送新聞快報！${delay} 秒後觸發事件`);
+            document.getElementById('news-input').value = '';
         }
 
         // 監聽在線人數

@@ -22,6 +22,41 @@
         .shake { animation: shakeScreen 0.4s ease-in-out; }
         @keyframes skullPulse { 0% { transform: scale(1); } 100% { transform: scale(1.1); } }
         @keyframes goShake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
+        /* 新聞快報 */
+        @keyframes newsSlideIn { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes newsCountdown { from { width: 100%; } to { width: 0%; } }
+        #news-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 80;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #news-overlay.show { display: flex; }
+        .news-card {
+            animation: newsSlideIn 0.5s ease-out;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            border: 2px solid #06b6d4;
+            border-radius: 16px;
+            padding: 32px 40px;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 0 40px rgba(6,182,212,0.3);
+        }
+        .news-bar {
+            height: 4px;
+            background: #06b6d4;
+            border-radius: 2px;
+            margin-top: 16px;
+        }
+        .news-bar-inner {
+            height: 100%;
+            background: #f59e0b;
+            border-radius: 2px;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white p-4 md:p-8">
@@ -35,7 +70,7 @@
     <div class="text-left bg-gray-800 rounded-lg p-4 mb-6 text-sm text-gray-300 leading-relaxed">
         <p class="text-yellow-500 font-bold mb-2">遊戲規則：</p>
         <p>• 你有 $1,000 現金，目標：撐過 <b class="text-white">10 輪</b></p>
-        <p>• 每 10 秒一輪，觸發<b class="text-red-400">黑天鵝事件</b></p>
+        <p>• 老師發動<b class="text-red-400">黑天鵝事件</b>，全班同步</p>
         <p>• 三種資產：<span class="text-green-400">科技股</span>、<span class="text-blue-400">能源股</span>、<span class="text-yellow-400">黃金</span></p>
         <p>• 資產淨值歸零 = <b class="text-red-500">破產死亡</b></p>
     </div>
@@ -143,6 +178,17 @@
         <h2 id="event-title" class="text-4xl font-black mb-4"></h2>
         <p id="event-desc" class="text-xl mb-6"></p>
         <button onclick="closeModal()" class="bg-white text-black px-6 py-2 rounded-full font-bold hover:bg-gray-200 transition">我知道了</button>
+    </div>
+</div>
+
+<!-- ===== 新聞快報覆蓋層 ===== -->
+<div id="news-overlay">
+    <div class="news-card">
+        <div class="text-cyan-400 text-sm font-bold tracking-widest mb-2">📰 新聞快報 BREAKING NEWS</div>
+        <div id="news-text" class="text-2xl font-black text-white leading-relaxed mb-3"></div>
+        <div class="text-sm text-gray-400 mb-1">事件即將發生...</div>
+        <div id="news-countdown-text" class="text-yellow-400 font-bold text-lg mb-2"></div>
+        <div class="news-bar"><div id="news-bar-inner" class="news-bar-inner" style="width:100%"></div></div>
     </div>
 </div>
 
@@ -331,6 +377,78 @@
         } catch (e) { console.warn('Game control listen error:', e.message); }
     }
 
+    // 監聽新聞快報
+    let lastNewsId = 0;
+    function listenNewsFlash() {
+        if (!fbDb) return;
+        try {
+            fbDb.ref('news_flash').on('value', (snapshot) => {
+                const news = snapshot.val();
+                if (!news || news.id === lastNewsId) return;
+                lastNewsId = news.id;
+                if (!playerName || !gs.prices) return;
+
+                // 顯示新聞覆蓋層
+                paused = true;
+                const overlay = document.getElementById('news-overlay');
+                overlay.classList.add('show');
+                document.getElementById('news-text').textContent = news.text;
+
+                const delay = news.delay || 8;
+                let remaining = delay;
+                document.getElementById('news-countdown-text').textContent = `${remaining} 秒後揭曉影響...`;
+                document.getElementById('news-bar-inner').style.width = '100%';
+
+                log(`[📰 新聞快報] ${news.text}`);
+
+                // 倒數動畫
+                const newsTimer = setInterval(() => {
+                    remaining--;
+                    if (remaining <= 0) {
+                        clearInterval(newsTimer);
+                        overlay.classList.remove('show');
+
+                        // 觸發對應的事件
+                        const ev = news.event;
+                        if (ev) {
+                            if (ev.target === 'cash') {
+                                gs.player.cash *= ev.impact;
+                            } else if (ev.target === 'all_down' || ev.target === 'all_up') {
+                                Object.keys(gs.prices).forEach(k => { gs.prices[k] *= ev.impact; });
+                            } else if (gs.prices[ev.target] !== undefined) {
+                                gs.prices[ev.target] *= ev.impact;
+                            }
+
+                            gs.round++;
+                            document.getElementById('round-display').textContent = `第 ${gs.round} / ${MAX_ROUNDS} 輪`;
+
+                            // 顯示事件彈窗
+                            document.getElementById('event-modal').style.display = 'flex';
+                            document.getElementById('modal-content').className = "p-8 rounded-lg text-center max-w-md event-flash";
+                            document.getElementById('event-title').textContent = `${ev.icon} ${ev.name}`;
+                            document.getElementById('event-desc').textContent = ev.msg;
+                            log(`[第${gs.round}輪] ${ev.icon} ${ev.name}: ${ev.msg}`);
+                            gs.eventHistory.push(ev.name);
+                            document.body.classList.add('shake');
+                            setTimeout(() => document.body.classList.remove('shake'), 500);
+                            updateUI();
+                            syncToFirebase();
+
+                            if (gs.round >= MAX_ROUNDS) {
+                                setTimeout(() => { closeModal(); winGame(); }, 2000);
+                            }
+                        } else {
+                            paused = false;
+                        }
+                    } else {
+                        document.getElementById('news-countdown-text').textContent = `${remaining} 秒後揭曉影響...`;
+                        document.getElementById('news-bar-inner').style.width = `${(remaining / delay) * 100}%`;
+                    }
+                }, 1000);
+            });
+        } catch (e) { console.warn('News flash listen error:', e.message); }
+    }
+
     const blackSwans = [
         { name: "矽谷大地震", target: "tech", impact: 0.35, msg: "伺服器中心全毀！科技股暴跌 65%！", icon: "🌋" },
         { name: "AI 泡沫破裂", target: "tech", impact: 0.5, msg: "AI 概念股崩盤！科技股暴跌 50%！", icon: "🤖" },
@@ -372,6 +490,7 @@
         listenTeacherEvents();
         listenLeaderboard();
         listenGameControl();
+        listenNewsFlash();
 
         if (timerInterval) clearInterval(timerInterval);
         timerInterval = setInterval(tick, 1000);
@@ -532,6 +651,7 @@
                 fbDb.ref('global_event').off();
                 fbDb.ref('players').off();
                 fbDb.ref('game_control').off();
+                fbDb.ref('news_flash').off();
                 if (playerName) fbDb.ref('players/' + playerName).remove();
             }
         } catch (e) { console.warn('Firebase cleanup error:', e.message); }
