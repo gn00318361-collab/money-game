@@ -28,14 +28,16 @@
         @keyframes newsCountdown { from { width: 100%; } to { width: 0%; } }
         #news-overlay {
             display: none;
-            position: fixed; inset: 0;
-            background: rgba(0,0,0,0.85);
+            position: fixed; top: 0; left: 0; right: 0;
+            background: linear-gradient(180deg, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.6) 80%, transparent 100%);
             z-index: 80;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            padding-top: 40px;
+            pointer-events: none;
         }
         #news-overlay.show { display: flex; }
+        .news-card { pointer-events: auto; }
         .news-card {
             animation: newsSlideIn 0.5s ease-out;
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
@@ -86,7 +88,7 @@
         </div>
         <div class="text-right">
             <p id="round-display" class="text-xl font-bold">第 1 / 10 輪</p>
-            <p id="timer" class="text-sm text-gray-400">下一波事件: 10s</p>
+            <p id="timer" class="text-sm text-cyan-400 font-medium">📊 交易時間！趁現在調整投資組合</p>
         </div>
     </header>
 
@@ -186,7 +188,7 @@
     <div class="news-card">
         <div class="text-cyan-400 text-sm font-bold tracking-widest mb-2">📰 新聞快報 BREAKING NEWS</div>
         <div id="news-text" class="text-2xl font-black text-white leading-relaxed mb-3"></div>
-        <div class="text-sm text-gray-400 mb-1">事件即將發生...</div>
+        <div class="text-sm text-yellow-300 mb-1">⚡ 趕快調整你的投資組合！點擊下方買賣按鈕！</div>
         <div id="news-countdown-text" class="text-yellow-400 font-bold text-lg mb-2"></div>
         <div class="news-bar"><div id="news-bar-inner" class="news-bar-inner" style="width:100%"></div></div>
     </div>
@@ -388,8 +390,7 @@
                 lastNewsId = news.id;
                 if (!playerName || !gs.prices) return;
 
-                // 顯示新聞覆蓋層
-                paused = true;
+                // 顯示新聞覆蓋層（不暫停交易！讓學生看到新聞可以先操作）
                 const overlay = document.getElementById('news-overlay');
                 overlay.classList.add('show');
                 document.getElementById('news-text').textContent = news.text;
@@ -496,10 +497,26 @@
         timerInterval = setInterval(tick, 1000);
     }
 
+    // 市場小道消息（等待期間輪播增加趣味）
+    const marketRumors = [
+        "📊 交易時間！趁現在調整你的投資組合",
+        "💡 提示：分散投資可以降低風險喔",
+        "🔮 市場傳言：科技股最近波動很大...",
+        "🐋 大戶動態：有人正在大量買進黃金",
+        "📈 趁事件還沒來，先佈局你的策略！",
+        "🤔 想想看：如果能源股暴跌，你撐得住嗎？",
+        "💰 你的現金夠不夠應付突發狀況？",
+        "🎯 高手都在事件前就做好準備了！",
+        "⚠️ 別把雞蛋放在同一個籃子裡",
+        "🏦 市場永遠在變動，把握交易機會！",
+    ];
+    let rumorIdx = 0;
+
     function tick() {
         if (paused) return;
-        // 不再本地倒數觸發事件，改由老師統一發送
-        document.getElementById('timer').textContent = `等待老師發動事件...`;
+        // 輪播交易提示，讓等待期間有事看
+        rumorIdx = (rumorIdx + 1) % marketRumors.length;
+        document.getElementById('timer').textContent = marketRumors[rumorIdx];
 
         // 市場自然波動
         gs.prevPrices = { ...gs.prices };
